@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI 怎样从声音中找到说话的时刻｜Demo 23</title>
+<meta name="description" content="Silero VAD 真实 ONNX CPU 实验：为什么语音系统需要先找到语音出现的时刻，如何从逐帧概率产生候选区间。">
+<style>
+:root{font:16px/1.78 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203449;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1010px;margin:auto;padding:32px 22px 88px}a{color:#126393}a:focus-visible{outline:3px solid #317eb4;outline-offset:3px}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.3;margin:12px 0}h2{font-size:1.48rem;line-height:1.4;margin:0 0 13px}h3{font-size:1.12rem;margin:0 0 6px}p{margin:10px 0 17px}.eyebrow{font-size:.86rem;color:#2a6c8a;font-weight:700;letter-spacing:.05em}.muted{color:#56697a}section{background:#fff;border:1px solid #dfe8f0;border-radius:17px;margin:22px 0;padding:27px}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.panel{background:#f6f9fc;border:1px solid #dce7ef;border-radius:12px;padding:17px}.metric{font-size:1.9rem;color:#14658b;font-weight:800;line-height:1.25}.small{font-size:.88rem;color:#596c7b}.svgwrap{border:1px solid #d8e4ef;border-radius:12px;background:#f9fcff;margin:17px 0;padding:12px;overflow:hidden}svg{width:100%;height:auto;display:block}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.step{background:#ebf4f8;border-radius:10px;padding:12px;text-align:center;font-size:.92rem}.note{border-left:4px solid #c18a3d;background:#fff9ee;padding:16px;border-radius:6px}ul{padding-left:23px}li{margin:7px 0}.links a{margin-right:15px;display:inline-block}footer{color:#657789;border-top:1px solid #dfe7ef;margin-top:30px;padding-top:20px;font-size:.88rem}@media(max-width:680px){section{padding:19px}.columns,.steps{grid-template-columns:1fr}main{padding:22px 15px 55px}}
+</style></head><body><main>
+<header><div class="eyebrow">企业 AI 技术实验室 · 跨领域教程验证 01 · 公开试阅版</div><h1>AI 怎样知道一段录音中，哪里有人在说话？</h1>
+<p class="muted">Demo 23｜真实预训练 Silero VAD：从声音信号到语音活动概率，再到可能的说话时间区间。</p><p><a href="../index.html">← 返回教程目录</a></p></header>
+<section><h2>01｜现实问题：录音中何时该开始识别文字？</h2>
+<p>想象一个语音助手持续接收麦克风声音。录音中可能有人说话，也可能夹杂短暂沉默或环境噪声。如果整段声音始终交给后续语音识别模块处理，会增加不必要的工作量；如果过早丢弃声音，又可能漏掉真实发言。系统因此需要一个前置判断：<strong>在时间轴的哪些位置，声音更可能属于人类语音？</strong></p>
+<p>这就是语音活动检测（Voice Activity Detection，VAD）。它通常不能直接告诉我们说了什么，也不能判断是谁说的，而是提供候选语音区间，为语音转文字、音频切片和会话系统的后续处理提供线索。</p></section>
+<section><h2>02｜技术原理：不是听懂句子，而是估计语音概率</h2>
+<p>这次实验使用经过预训练的 <strong>Silero VAD ONNX</strong> 神经网络。音频按 16 kHz 单声道输入，程序每次送入 512 个采样点，相当于 <strong>32 毫秒</strong>。模型根据当前信号及保留的上下文和循环状态，输出一个介于 0 和 1 之间的语音活动概率。</p>
+<p>下面是用来理解原理的<strong>原创概念示意图</strong>，不是模型真实输出的概率曲线，也不是来自第三方 WAV 的波形。纵向起伏仅用于展示为什么需要把连续信号转换为“可能说话”的时间区间。</p>
+<div class="svgwrap"><svg viewBox="0 0 880 260" role="img" aria-label="教学示意：时间轴上的声音起伏、语音活动概率和候选区间，均非实际推理结果">
+<rect width="880" height="260" rx="12" fill="#f8fbff"/><text x="20" y="28" fill="#36536a" font-size="16">教学示意 · 概念图（非实验曲线）</text>
+<text x="20" y="75" fill="#36536a" font-size="14">输入声音</text><line x1="133" y1="78" x2="860" y2="78" stroke="#a3b5c4" stroke-width="2"/>
+<path d="M134 78 L180 78 L188 62 L194 90 L200 46 L205 110 L212 70 L219 88 L226 58 L235 78 L312 78 L320 60 L326 92 L333 55 L341 105 L349 63 L360 78 L440 78 L450 54 L459 105 L470 49 L480 95 L492 60 L504 78 L860 78" fill="none" stroke="#3291b3" stroke-width="2.5"/>
+<text x="20" y="147" fill="#36536a" font-size="14">语音概率</text><line x1="133" y1="170" x2="860" y2="170" stroke="#a3b5c4"/>
+<path d="M133 170L177 166L187 126L229 115L241 163L312 165L323 121L361 120L373 162L438 167L452 116L503 120L517 166L860 170" fill="none" stroke="#246f98" stroke-width="4" stroke-linejoin="round"/>
+<path d="M133 141H860" stroke="#ba873e" stroke-width="2" stroke-dasharray="8 6"/><text x="858" y="134" text-anchor="end" fill="#99672c" font-size="13">假设阈值</text>
+<rect x="183" y="188" width="60" height="20" rx="5" fill="#74c4a1"/><rect x="320" y="188" width="48" height="20" rx="5" fill="#74c4a1"/><rect x="449" y="188" width="61" height="20" rx="5" fill="#74c4a1"/><text x="20" y="202" fill="#36536a" font-size="14">检测区间</text><text x="860" y="238" text-anchor="end" fill="#596e7e" font-size="13">时间 →</text>
+</svg></div>
+<p>必须区分两层工作：<strong>神经网络负责计算逐帧概率</strong>，把概率合并成起止时间则属于后处理。这次实验为了便于解释，使用了 0.50 阈值、最多 4 帧短间隙合并、至少 6 帧持续时间的简化规则，并不是 Silero 官方生产分段算法。</p></section>
+<section><h2>03｜真实工程如何处理连续录音</h2>
+<div class="steps"><div class="step"><strong>① 真实录音</strong><div>读取上游 16 kHz WAV</div></div><div class="step"><strong>② 构建测试输入</strong><div>两段录音 + 3 秒明确人工静音</div></div><div class="step"><strong>③ ONNX 推理</strong><div>逐 32 ms 输出概率，保留模型状态</div></div><div class="step"><strong>④ 区间生成</strong><div>阈值、短间隙合并、时长筛选</div></div></div>
+<p>本实验将上游录音的头尾各 12 秒拼接，中间与首尾插入三个 1 秒的人工静音，组成 27 秒输入。<strong>真实录音内容与人工插入的静音必须分别标明</strong>，因为这一拼接方案只测试固定输入下的运行链路，不代表自然会话的统计分布。</p>
+<div class="svgwrap"><svg viewBox="0 0 880 152" role="img" aria-label="依据实验程序构造方式绘制的真实输入时间组成：0至1秒静音、1至13秒上游录音头段、13至14秒静音、14至26秒录音尾段、26至27秒静音">
+<text x="15" y="25" fill="#304a60" font-size="16">实际输入拼接结构（基于代码，非波形）</text>
+<rect x="20" y="55" width="31" height="46" fill="#b9c7d2"/><rect x="51" y="55" width="372" height="46" fill="#76b6d6"/><rect x="423" y="55" width="31" height="46" fill="#b9c7d2"/><rect x="454" y="55" width="372" height="46" fill="#76b6d6"/><rect x="826" y="55" width="31" height="46" fill="#b9c7d2"/>
+<text x="235" y="84" text-anchor="middle" fill="#113f5a" font-size="17">12 秒录音 A</text><text x="640" y="84" text-anchor="middle" fill="#113f5a" font-size="17">12 秒录音 B</text>
+<g fill="#526879" font-size="12"><text x="20" y="125">0</text><text x="51" y="125">1</text><text x="423" y="125">13</text><text x="454" y="125">14</text><text x="826" y="125">26</text><text x="857" y="125" text-anchor="end">27s</text></g>
+</svg></div>
+<p class="small">浅蓝部分来自公开上游测试录音；灰色部分为程序构造的静音。该图依据输入生成代码的确定时长绘制，不表示已经取得逐采样波形或人工语音标注。</p>
+</section>
+<section><h2>04｜GitHub 实验实际看到了什么</h2>
+<div class="columns"><div class="panel"><div class="metric">844 帧</div><strong>真实神经网络输出</strong><p>含末帧补零；每帧的模型语音概率被保存。</p></div><div class="panel"><div class="metric">9 段</div><strong>简化后处理候选区间</strong><p>不是已标注的九段人类发言，也不是九名说话人。</p></div><div class="panel"><div class="metric">0.999996</div><strong>最大单帧概率</strong><p>一次固定输入的神经预测，不是准确率。</p></div><div class="panel"><div class="metric">8/8 PASS</div><strong>实验前契约测试</strong><p>独立核验器还重新执行 ONNX，比对所有概率与区间。</p></div></div>
+<p>固定模型、录音来源与样本哈希后，GitHub Actions <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39395316679">#39395316679</a> 已完成真实 CPU 推理及独立重放。报告还记载了单次推理环节约 <strong>145.30 毫秒</strong>的观察值；它不是端到端通话延迟、稳定的吞吐数据或生产承诺。</p>
+<p><strong>真实曲线如何取得：</strong>工程增加了 `render_visualization.py`，其输入只能是通过独立核验的逐帧数据，生成概率曲线与 9 段候选区间的 SVG。该 SVG 需以新增工作流执行后的 Artifact 为准；<strong>本页当前不展示未经取得与审核的实测曲线</strong>。这是本样章与上面的原创教学示意图区分的地方。</p>
+<p class="links"><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39395316679">真实 Actions 记录</a><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/docs/TECH_BATCH_08_DEMO_23_VAD_REPORT_20261020.md">实验报告</a><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/23-real-vad">源码与核验器</a></p></section>
+<section><h2>05｜这次证明了什么，哪些仍待解决</h2>
+<p>本次结果支持一个明确结论：预训练 Silero 模型确实在 CPU 上处理了含真实来源录音的固定测试信号，并输出可追溯的逐帧概率；根据预先写明的简化规则可以得到候选语音区间，独立程序能够重放并核验这些结果。</p>
+<div class="note"><strong>能力边界：</strong>没有独立的人工标注语音真值，因而不能计算检出准确率、精确率或召回率；9 段不代表“识别准确的 9 段”。这也不是语音转文字、说话人身份识别或盲说话人分离。27 秒拼接样本不足以证明多语言、噪声和长会议下的鲁棒性。原录音独立再分发权限尚未审定，教程不提供其复制品。</div></section>
+<section><h2>06｜怎样核查与继续学习？</h2>
+<ul><li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/23-real-vad/vad_e2e.py">阅读 ONNX 推理与区间算法</a>：查清哪些是模型预测、哪些是普通 Python 后处理。</li>
+<li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/23-real-vad/verify_evidence.py">阅读独立复算程序</a>：从固定模型、音频 SHA-256 到每帧概率、每段边界。</li>
+<li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39395316679">查看成功记录和 Artifact</a>：核查原始 CSV/JSON。私人实验仓库链接可能需要仓库访问权限。</li></ul>
+<p>下一步可以对照 <a href="../demo24/index.html">目标检测</a> 和 <a href="../demo25/index.html">语义分割</a>：三者虽然输入不同，都经历了“模型计算结果 → 明确后处理 → 可核验输出”。区别在于 VAD 的输出位于时间轴上，而不是图片坐标或像素网格。</p></section>
+<footer>读者版候选 v0.1 · 独立于已验收 Demo 23。页面为静态教学说明，不进行实时语音推理。概念示意图和真实工程输入拼接结构均为原创 SVG；不托管第三方音频或模型权重。本页为公开试阅版，可根据人工阅读反馈持续修订。</footer>
+</main></body></html>
