@@ -1,23 +1,23 @@
-# 企业 AI 技术教程 / Enterprise AI Reader Showcase
+# 企业 AI 技术阅读网站 / Enterprise AI Reader Showcase
 
-[中文](#中文) · [English](#english) · [公开网站 / Live website](https://manchaohu.github.io/enterprise-ai-showcase/) · [English website](https://manchaohu.github.io/enterprise-ai-showcase/en/)
+[中文](#中文) · [English](#english) · [在线中文站](https://manchaohu.github.io/enterprise-ai-showcase/) · [English site](https://manchaohu.github.io/enterprise-ai-showcase/en/)
 
 ## 中文
 
-这里展示从真实企业 AI 技术实验整理而来的中文/英文双语图文教程。**当前 6 篇**：Demo 24 YOLOv8n 目标检测、Demo 25 SegFormer 语义分割、Demo 23 Silero VAD、Demo 21 TTM 时序预测、Demo 13 真实 RAG、Demo 27 SQLite 图关系多跳查询。
+本公开仓库已将**全部 27 项已验收的技术 Demo**建立为可浏览的中英双语入口。目录按 **7 大技术领域**组织，提供搜索、明确的能力边界和原始工程证据链接。原有 **Demo 13、21、23、24、25、27 六篇完整图文教程**保留；其余 **21 项**新增结构化的**首版技术导读**，说明问题、处理链路、实测结果、复现入口和限制，不把初步覆盖冒充已完成的深度图文教程。
 
-每篇教程均有独立的 `/en/demoXX/` 英文页面，以及通往中文版的链接。中文版是 `/demoXX/`；目录分别是网站首页 `/` 与 `/en/`。中英版本必须保留同样的实测数值、代码来源、限定结论与许可边界，不可以把示意图冒充实验输出。
+公开文件为中文首页 `index.html`、英文首页 `en/index.html`，以及 `demo01/index.html` 至 `demo27/index.html` 和 `en/demo01/index.html` 至 `en/demo27/index.html`，合计 **56 个 HTML**。全部页面有可操作的语言切换链接。
 
-本仓库是 **Public**，与私人实验仓库 `enterprise-ai-tech-lab` 分开。这里只发布明确选定的静态教学 HTML，不复制模型权重、原录音照片、原始训练数据或私有代码。实验仓库内的 Actions、源码链接可能需要授权才能访问。
+读者页面从真实、限定范围的工程验收构建。**模仿/模拟模型响应、合成样本、真实预训练神经推理分别说明**；图解流程不等于真实模型输出，技术运行 PASS 不等于准确率/性能/生产许可验收。原工程仓库 `enterprise-ai-tech-lab` 仍为 Private；未经授权的访客可能无法打开源码和 Actions，本站不复制其中的模型权重、受限媒体、私有数据或凭证。
 
-**发布方式：** 直接提交 `main`，GitHub Pages 自动检查全部 14 个静态 HTML 页面的站内链接并部署；收到人工阅读反馈后直接修改，不为每篇教程单独创建 PR/MR。详见 [发布验收说明](DEPLOYMENT.md)。
+**发布：** 新增教程、导读或修订直接提交 `main`，GitHub Pages 通过明确的 56 页白名单、相对链接和双向语言链接校验后部署；无需逐篇 PR/MR。内容可在公开站点上由人类审阅、反馈并逐轮深化。详见 [部署与验收](DEPLOYMENT.md)。
 
 ## English
 
-This public repository hosts **six complete bilingual illustrated tutorials** derived from scope-limited enterprise AI engineering experiments: Demo 24 YOLOv8n detection, Demo 25 SegFormer semantic segmentation, Demo 23 Silero VAD, Demo 21 TTM time-series forecasting, Demo 13 genuine RAG, and Demo 27 SQLite graph traversal.
+This public repository provides a real **Chinese and English reading entry for all 27 scope-accepted engineering demos**, organized into **seven technology fields** with searchable catalog cards, source evidence links and explicit limitations. The six existing **full illustrated lessons** (Demos 13, 21, 23, 24, 25, 27) remain unchanged in depth. The other **21 entries** now have substantive bilingual **initial technical field guides**, not falsely labeled complete illustrated tutorials.
 
-Each lesson has a full English companion at `/en/demoXX/`, with a working return link to its Chinese counterpart at `/demoXX/`. English and Chinese indexes are at `/en/` and `/`, respectively. Both versions must faithfully preserve real measured values, evidence links, known model/data limitations, and clear labels distinguishing conceptual illustrations from actual inference results.
+Published static files comprise the Chinese and English catalogs plus `demo01/index.html` through `demo27/index.html` and their `en/demoXX/index.html` equivalents: **56 HTML pages**. Every demo has a working cross-language link.
 
-This **public** website repository is separate from the **private** `enterprise-ai-tech-lab` engineering repository. Published content is an explicit whitelist of static HTML pages: no original audio, photographs, model weights, proprietary source, secrets or full training datasets are redistributed. Links to private experiment code or Actions may require repository permission.
+The pages explain actual bounded experiments, clearly distinguishing synthetic fixtures, mocked model responses and genuine pretrained model inference. A demo PASS is not an accuracy benchmark, production readiness assurance, security audit or licensing clearance. The linked `enterprise-ai-tech-lab` engineering repository remains private; readers without permission may not access raw source or Actions. This public site does not redistribute model weights, sensitive code, credentials, original restricted images or audio.
 
-**Publication workflow:** commit directly to `main`; GitHub Pages checks local links across all 14 HTML pages and deploys. Human review and corrections happen on the live public drafts without a per-lesson PR/MR. See the [bilingual deployment guide](DEPLOYMENT.md).
+**Publishing:** commit directly to `main`; GitHub Pages stages exactly the 56 permitted pages, checks local links and language counterparts, and deploys. Readers can review drafts live, while the initial field guides are deepened incrementally without per-page PR/MR. See [deployment and acceptance](DEPLOYMENT.md).

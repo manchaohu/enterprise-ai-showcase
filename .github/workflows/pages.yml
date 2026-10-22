@@ -5,12 +5,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
-      - 'demo24/**'
-      - 'demo25/**'
-      - 'demo23/**'
-      - 'demo21/**'
-      - 'demo13/**'
-      - 'demo27/**'
+      - 'demo*/**'
       - 'en/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
@@ -27,13 +22,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Stage reviewed pages only and check local links
+      - name: Stage whitelisted bilingual pages and verify local links
         run: |
           python - <<'PY'
           from pathlib import Path
           from html.parser import HTMLParser
           from shutil import copy2
-          pages = ['index.html', 'demo24/index.html', 'demo25/index.html', 'demo23/index.html', 'demo21/index.html', 'demo13/index.html', 'demo27/index.html', 'en/index.html', 'en/demo24/index.html', 'en/demo25/index.html', 'en/demo23/index.html', 'en/demo21/index.html', 'en/demo13/index.html', 'en/demo27/index.html']
+          ids = [f'{number:02d}' for number in range(1, 28)]
+          pages = ['index.html', 'en/index.html'] + [f'demo{number}/index.html' for number in ids] + [f'en/demo{number}/index.html' for number in ids]
+          assert len(pages) == 56
           out = Path('_site')
           for name in pages:
               src=Path(name)
@@ -53,8 +50,17 @@ jobs:
                   if link.startswith(('https://','http://','mailto:','#')):continue
                   local=link.split('#')[0].split('?')[0]
                   assert (out/name).parent.joinpath(local).is_file(),(name,link)
-          assert len(list(out.rglob('*.html')))==14
-          print('Validated fourteen bilingual reader pages and relative links')
+          assert len(list(out.rglob('*.html'))) == 56
+          for number in ids:
+              zh = (out/f'demo{number}/index.html').read_text(encoding='utf-8')
+              en = (out/f'en/demo{number}/index.html').read_text(encoding='utf-8')
+              assert f'../en/demo{number}/index.html' in zh, number
+              assert f'../../demo{number}/index.html' in en, number
+              assert '<html lang="zh-CN">' in zh, number
+              assert '<html lang="en">' in en, number
+          assert (out/'index.html').read_text(encoding='utf-8').count('class="card"') == 27
+          assert (out/'en/index.html').read_text(encoding='utf-8').count('class="card"') == 27
+          print('Validated 56 bilingual pages: 27 Chinese + 27 English demos, two indexes, and local links')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
