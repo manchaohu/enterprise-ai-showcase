@@ -11,6 +11,7 @@ on:
       - 'demo21/**'
       - 'demo13/**'
       - 'demo27/**'
+      - 'en/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -32,7 +33,7 @@ jobs:
           from pathlib import Path
           from html.parser import HTMLParser
           from shutil import copy2
-          pages = ['index.html', 'demo24/index.html', 'demo25/index.html', 'demo23/index.html', 'demo21/index.html', 'demo13/index.html', 'demo27/index.html']
+          pages = ['index.html', 'demo24/index.html', 'demo25/index.html', 'demo23/index.html', 'demo21/index.html', 'demo13/index.html', 'demo27/index.html', 'en/index.html', 'en/demo24/index.html', 'en/demo25/index.html', 'en/demo23/index.html', 'en/demo21/index.html', 'en/demo13/index.html', 'en/demo27/index.html']
           out = Path('_site')
           for name in pages:
               src=Path(name)
@@ -52,8 +53,8 @@ jobs:
                   if link.startswith(('https://','http://','mailto:','#')):continue
                   local=link.split('#')[0].split('?')[0]
                   assert (out/name).parent.joinpath(local).is_file(),(name,link)
-          assert len(list(out.rglob('*.html')))==7
-          print('Validated seven publishable reader pages and relative links')
+          assert len(list(out.rglob('*.html')))==14
+          print('Validated fourteen bilingual reader pages and relative links')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

@@ -1,19 +1,27 @@
-# 网站发布与验收
+# 公开教程发布与验收 / Public Tutorial Deployment and Acceptance
 
-本仓库为 **Public**，与私人技术实验仓库 `enterprise-ai-tech-lab` 完全独立。
+[中文](#中文) · [English](#english)
 
-发布白名单现为七份 HTML：首页加上 Demo 24、25、23、21、13、27 六篇教程。读者教程可直接提交主分支，公开试阅后再按人工反馈修订，不必每次走 PR/MR。真实实验模型、图片和私人仓库源码不被复制。它们是静态教程；示意 SVG 不是实际模型预测图。
+## 中文
 
-首次配置时在 [Settings → Pages](https://github.com/manchaohu/enterprise-ai-showcase/settings/pages) 的 **Build and deployment → Source** 选择 **GitHub Actions**。部署脚本只上传白名单内的七份 HTML，每次 main 的教程文件更新会自动发布。若首次合并后自动部署尚未成功，可在 [Actions](https://github.com/manchaohu/enterprise-ai-showcase/actions) 手动运行 `Publish AI reader site`。
+网站：[https://manchaohu.github.io/enterprise-ai-showcase/](https://manchaohu.github.io/enterprise-ai-showcase/)；英文入口：[https://manchaohu.github.io/enterprise-ai-showcase/en/](https://manchaohu.github.io/enterprise-ai-showcase/en/)。
 
-成功部署后的项目站点地址应为：
+**部署隔离：** 此 Public 仓库与私有 `enterprise-ai-tech-lab` 独立。只发布白名单中的 **14 个 HTML**：中文首页、中文 6 篇、英文首页、英文 6 篇；不发布模型、原录音、第三方照片、私有源码或数据。所有实验来源和许可证限制必须如实标记。
 
-https://manchaohu.github.io/enterprise-ai-showcase/
+**操作流程：** 读者版 HTML 可直接提交 `main`，无需逐篇 PR/MR。文件变动触发 `.github/workflows/pages.yml`，先验证所有页面和站内相对链接，再上传 Pages Artifact，最后由 `actions/deploy-pages@v4` 发布。发布后人工分别检查中英文首页、六篇中文、六篇英文及每页语言切换链接。
 
-部署通过后须实际验证首页、`demo24/`、`demo25/`、`demo23/`、`demo21/`、`demo13/`、`demo27/` 可访问和章节互相跳转。在 GitHub Actions 显示 SUCCESS 前，网址只能视为预期地址。
+**首次设置：** 仓库 [Settings → Pages](https://github.com/manchaohu/enterprise-ai-showcase/settings/pages) 中，将 Build and deployment / Source 选为 GitHub Actions。现已存在成功部署记录；若工作流失败，不能把页面更新称为上线成功。可从 [Actions](https://github.com/manchaohu/enterprise-ai-showcase/actions) 查看准确运行和部署状态。
 
-## 批量教程扩展（2026-10-22）
+**质量约束：** 同一技术事实、运行 ID、真实数据数字、能力边界在中英文保持一致。示意图与实测图分别标明，英文页不能只是空白语言开关；页面不提供实时模型服务。私有仓库的链接可能无法被未经授权的读者打开。人工审读后的修改继续直接提交主分支。
 
-在前三篇人工效果获得认可后，第一轮再直接发布三篇不同机制的读者教程：Demo 21 时序预测、Demo 13 真 RAG、Demo 27 SQLite 关系图多跳。新的真实可视化：Demo 21 由已有核验报告中的六个 MAE 数值重新绘制比较图；Demo 27 图依据源文件 `data/evidence.json` 的五条显式边绘制；Demo 13 图为严格标记的代码机制示意。三篇都不把示意图误称真实模型输出。
+## English
 
-今后批量发布仍以可追溯证据、用户人工读后修改为准。批量扩充只增加公开教程数量，不增加已有 27 项 Demo 数量。无需 PR，但须等待 GitHub Pages 自动构建/部署成功并检查站内链接。
+Website: [https://manchaohu.github.io/enterprise-ai-showcase/](https://manchaohu.github.io/enterprise-ai-showcase/). English entry: [https://manchaohu.github.io/enterprise-ai-showcase/en/](https://manchaohu.github.io/enterprise-ai-showcase/en/).
+
+**Isolation:** the public showcase is independent of the private `enterprise-ai-tech-lab` repository. The Pages build publishes exactly **14 whitelisted HTML pages**: one Chinese index, six Chinese lessons, one English index, and six English lessons. Model weights, original audio, third-party photographs, private engineering code, and datasets are not uploaded. All evidence and licensing caveats remain explicit.
+
+**Process:** update reader HTML directly on `main`; a per-page pull request is not required. `.github/workflows/pages.yml` validates file presence and local relative links before packaging a Pages artifact and deploying it with `actions/deploy-pages@v4`. After the deployment succeeds, manually review both catalogs and all twelve lessons, including the Chinese ↔ English navigation on every page.
+
+**Initial settings:** under [Settings → Pages](https://github.com/manchaohu/enterprise-ai-showcase/settings/pages), Build and deployment / Source should be GitHub Actions. Consult actual [Actions results](https://github.com/manchaohu/enterprise-ai-showcase/actions) before claiming any new version is live.
+
+**Editorial acceptance:** both language versions must agree about dates, numeric observations, model identities, evidence run IDs, limitations and demonstrated scope. Distinguish conceptual SVGs from real experimental output. This static website does not host model inference, and private laboratory links may be inaccessible to unauthorized visitors. Correct translated text directly on `main` after reader feedback.
