@@ -1,5 +1,95 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 18 · 版面理解：模型能判断表单里的标题、问题和答案吗？</title><meta name="description" content="从扫描表单提取结构化信息不只是 OCR 识字，还要结合词的位置、页面图像和上下文判断哪些词是标题、问题或答案。模型成功执行并不保证字段能被正确抽取，因此需要展示真实错误率。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo18/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 18 · 双语技术导读首版</div><h1>版面理解：模型能判断表单里的标题、问题和答案吗？</h1><p class="lead">从扫描表单提取结构化信息不只是 OCR 识字，还要结合词的位置、页面图像和上下文判断哪些词是标题、问题或答案。模型成功执行并不保证字段能被正确抽取，因此需要展示真实错误率。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜技术为什么有用</h2><p>从扫描表单提取结构化信息不只是 OCR 识字，还要结合词的位置、页面图像和上下文判断哪些词是标题、问题或答案。模型成功执行并不保证字段能被正确抽取，因此需要展示真实错误率。</p></section><section><h2>02｜核心技术与处理流程</h2><p>运行 FUNSD 微调版 LayoutLMv3，输入两张真实公开测试表单图、数据集已有 OCR 词和归一化边界框，禁用内部 OCR。模型在 CPU 上预测词级 BIO 角色，再根据参考标注计算匹配情况，保留 logits 与原图哈希。<div class="flow"><div class="step"><b>01</b>读取 FUNSD 测试表单</div><div class="step"><b>02</b>图像+OCR 词+bbox</div><div class="step"><b>03</b>LayoutLMv3 词级推理</div><div class="step"><b>04</b>对比 390 词真值</div></div><p class="small">根据代码整理的流程图，不冒充实际模型输出。</p></p></section><section><h2>03｜真实执行的实验过程</h2><p>样本 01 有 223 个词，样本 02 有 167 个词，共 390 个词。模型将其中 174 个预测为非 O；对应参考标注匹配分别为 83/223（37.22%）与 112/167（67.07%）。</p></section><section><h2>04｜已观测结果与验收证据</h2><p>真实预训练/微调模型前向推理与独立证据核对成功，但综合词级标签仅 195/390（50.0%）一致。这是一个很有价值的负面质量事实：演示通过不等于业务可用。<div class="proof"><strong>限定范围 E2E 验收通过</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">GitHub Actions #39367224381</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/18-document-layout">工程源码（私有）</a></div></p></section><section><h2>05｜复现程序与运行证据</h2><p>按照工程仓库环境要求执行以下命令；公开网站并不直接运行模型。<pre><code>cd projects/18-document-layout
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 18 · LayoutLMv3 文档版面理解：图像、词框与 BIO 标签预测</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../index.html">教程目录</a><strong>中文</strong><a href="../en/demo18/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 18</div></header><main><h1>Demo 18｜LayoutLMv3 文档版面理解：图像、词框与 BIO 标签预测</h1><p class="repository-access-notice">发布提示：技术源码仓库为私有仓库，公开读者可能无法打开源码链接；本页提供经节选的实现代码与实验记录，不包含可直接下载的完整工程。</p>
+<blockquote>
+<p>在线审读候选（未通过逐篇人工验收） · 基于真实工程源码和证据 · 原始技术 Demo 的限定范围 PASS，不代表文章人工验收</p>
+</blockquote>
+<p><strong>工程源码（私有）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/18-document-layout">18-document-layout</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">39367224381</a></p>
+<h2>1. 技术需求与验收条件</h2>
+<p>把文档图片、已标注的 OCR 词和位置框输入已微调的 LayoutLMv3，预测每个词在表单中的角色（标题、问题、答案或其他）。本 Demo 使用 FUNSD 公开测试集的两份表单，验证多模态模型真实前向、词级标签对齐及结果统计。OCR 词和坐标已经由数据集提供，本程序不执行 OCR。</p>
+<h2>2. 技术方案与执行链</h2>
+<p><code>datasets.load_dataset()</code> 读取 <code>test[:2]</code>，<code>AutoProcessor(..., apply_ocr=False)</code> 把图片、词和 <code>[0,1000]</code> 归一化矩形编码为 <code>pixel_values</code>、<code>input_ids</code> 和 <code>bbox</code>；<code>AutoModelForTokenClassification</code> 输出七类 BIO 标签 logits。由于 tokenizer 会把一个单词拆成多个 wordpiece，程序使用 <code>word_ids()</code> 选取每个原词的首个 Token 进行对齐和评分。</p>
+<h2>3. 核心实现与代码要点</h2>
+<h3>3.1 校验词、框、标签对齐</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">if len(words) != len(boxes) or len(words) != len(gold_tags):
+    raise ValueError("Misaligned words / boxes / reference labels")
+if (len(box) != 4 or any(type(x) is not int or
+    not 0 &lt;= x &lt;= 1000 for x in box)):
+    raise ValueError("Invalid normalized document bounding box")
+</code></pre>
+<p>模型依赖文字序列与图中位置正确对应；词数、框数和标签数不相等会导致错位监督。<code>bbox</code> 的 0–1000 标准化坐标用于编码词的空间关系。若企业 OCR 输出的是像素坐标，需要先按页面宽高归一化，并对裁剪、旋转后的坐标体系进行一致性处理。</p>
+<h3>3.2 处理器与模型前向</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">processor = AutoProcessor.from_pretrained(MODEL_ID, apply_ocr=False)
+encoded = processor(image, words, boxes=boxes, return_tensors="pt",
+                    truncation=True, max_length=512)
+with torch.inference_mode():
+    logits = model(**encoded).logits
+    probabilities = logits.softmax(dim=-1)
+</code></pre>
+<p><code>apply_ocr=False</code> 显式禁用处理器内 OCR，因为现成词框来自 FUNSD 标注。<code>max_length=512</code> 可能截断较长表单的末尾词；本轮两份文件的统计显示无词截断。<code>softmax(dim=-1)</code> 转为七个标签的相对得分，再以 argmax 取预测类别；最高得分不代表校准后的业务置信概率。</p>
+<h3>3.3 原词对齐与标签评价</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">aligned = first_wordpieces(encoded.word_ids(batch_index=0), len(words))
+for pos, word_id in aligned:
+    prob = probabilities[0, pos]
+    label_index = int(prob.argmax().item())
+    predicted.append({"word": words[word_id],
+        "predicted_label": LABELS[label_index],
+        "gold_label": LABELS[gold[word_id]]})
+</code></pre>
+<p>每个原词只使用第一个子词位置进行统计，避免多 Token 词重复计数。BIO 中 <code>B-</code> 表示实体片段开始，<code>I-</code> 为后续词，<code>O</code> 为其他；这些是分类标签，不自动组成键值对。原代码统计参考标签与预测标签完全相同的词比例，这是该样本的描述性指标，不是文档级抽取准确率或数据集公开榜单分数。</p>
+<h2>4. 运行与真实结果</h2>
+<p>真实证据 <code>FINETUNED_LAYOUTLMV3_E2E_PASS</code>。两份 FUNSD 表单的覆盖词数分别为 <code>223</code>、<code>167</code>，均未截断；参考标签匹配数分别为 <code>83</code>、<code>112</code>，样本词级匹配比例分别为 <code>0.3722</code> 和 <code>0.6707</code>。合计 <code>390</code> 词，<code>195</code> 词预测与参考标签相同，即 <code>0.5000</code> 描述性比例；非 <code>O</code> 预测数 <code>174</code>。这些数字反映两份特定样本的词级角色预测，并未检验通用文档抽取性能。</p>
+<table>
+<thead>
+<tr>
+<th>证据字段</th>
+<th>归档值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>FINETUNED_LAYOUTLMV3_E2E_PASS</td>
+</tr>
+<tr>
+<td><code>covered_words</code></td>
+<td>390</td>
+</tr>
+<tr>
+<td><code>reference_matches</code></td>
+<td>195</td>
+</tr>
+<tr>
+<td><code>descriptive_word_accuracy</code></td>
+<td>0.5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测素材或源码示意（仅在线审读；见各图标注）</strong>：</p>
+<p><p class="source-note">FUNSD 原始表单图像及叠加图未进入公开发布版；可以在本文对照逐词预测字段和测试结果。</p>
+<em>表单 01：依据模型预测 BIO 词框绘制（在线审读）</em></p>
+<p><p class="source-note">FUNSD 原始表单图像及叠加图未进入公开发布版；可以在本文对照逐词预测字段和测试结果。</p>
+<em>表单 02：依据模型预测 BIO 词框绘制（在线审读）</em></p>
+<h2>5. 使用与工程集成</h2>
+<p><strong>复现命令（需私有仓库访问权限）</strong></p>
+<pre><code class="language-bash">cd projects/18-document-layout
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python layout_e2e.py
-python verify_evidence.py</code></pre><p class="small">私有仓库源码与 Actions 可能需要授权才能访问；本站不再分发模型权重和私人材料。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">既有 OCR 词和框由数据集提供，本实验没有从图片重新识字。词级角色不能自动完成问答字段配对、键值提取或可靠表单解析；50.0% 不是完整 FUNSD 基准分数。</div><p>本篇定位为首版双语技术导读，尚未达到原有六篇完整图文教程的深度。后续将增加更完整的应用场景、真实结果图和逐步讲解。</p></p></section><footer>Demo 18 · 基于工程验收的双语技术导读 · <a href="../index.html">目录</a></footer></main></body></html>
+python verify_evidence.py
+</code></pre>
+<p>对实际企业文档，可在 OCR 后接版面模型，先保留逐词文字与几何框，再将 BIO 标签组装为标题、问题、答案片段，最后使用空间邻接、阅读顺序或关系模型建立键值对。该后续组装和语义关系未由此 Demo 验证。前置 OCR 的错字、漏框和版面偏移会传递给分类器，因此应独立评估 OCR 和版面分类两段误差。</p>
+<h2>6. 验证边界及来源</h2>
+<p>仅两份 FUNSD 测试表单；原图和数据集标签来自第三方公开数据，公开再发布需单独核验许可。模型未进行 OCR，未建立字段关联，未测试中文或企业真实业务单据。内部叠加图中的标注颜色由实际预测标签生成，不是数据集原始标注，也不代表人工标注真值。</p>
+<p><strong>证据出处</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">Actions Run</a> · <code>evidence/demo18_layout_evidence.json</code></p>
+<p><strong>发布约束</strong>：私有研究材料不自动转为公开可复现；实测附件和第三方素材需在发布前核对许可、隐私及可访问性。</p>
+</main><footer>公开在线审读 · 内容未人工验收 · 不等同于生产验收</footer></body></html>

@@ -1,4 +1,94 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 02 · PDF 与扫描件：文本、OCR 和表格如何结构化？</title><meta name="description" content="企业收到的 PDF 既有直接包含文字的电子文件，也有纸张扫描成的图片，还有带网格的业务表格。同一个“抽取字段”需求必须根据页面类型选择不同处理手段，最后产生一致的结构化结果。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo02/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 02 · 技术导读首版</div><h1>PDF 与扫描件：文本、OCR 和表格如何结构化？</h1><p class="lead">企业收到的 PDF 既有直接包含文字的电子文件，也有纸张扫描成的图片，还有带网格的业务表格。同一个“抽取字段”需求必须根据页面类型选择不同处理手段，最后产生一致的结构化结果。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>企业收到的 PDF 既有直接包含文字的电子文件，也有纸张扫描成的图片，还有带网格的业务表格。同一个“抽取字段”需求必须根据页面类型选择不同处理手段，最后产生一致的结构化结果。</p></section><section><h2>02｜核心技术与实现机制</h2><p>程序使用 PyMuPDF 读取电子 PDF 文本并渲染扫描页，Tesseract 与 pytesseract 识别扫描件中的文字，pdfplumber 根据可解析的网格提取表格行。ReportLab 与 Pillow 生成明确标记的合成测试票据，避免依赖私人票据样本。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>生成三种合成 PDF</div><div class="step"><b>02</b>文本或 OCR 提取</div><div class="step"><b>03</b>网格表格解析</div><div class="step"><b>04</b>JSON 字段与行核验</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>实验生成电子票据 INV-001、扫描票据 SCAN-002 和含 Widget/Service 两行的表格 PDF。解析器需提取票号、日期 2026-10-19、金额 145.80，检查扫描页实际走 ocr_tesseract 分支，并确认两行商品仍能从表格提取。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>专项 CI 验证 PDF 文本、扫描件 OCR、表格读取的真实解析过程，产生 PDF_OCR_TABLE_E2E_PASS 和证据 JSON。成功是这三个固定构造文件的工程链路结果，不是对所有发票格式的字段准确率测评。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39204378860" target="_blank" rel="noopener noreferrer">GitHub Actions #39204378860</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/02-document-extraction" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>sudo apt-get install tesseract-ocr
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 02 · PDF 与扫描件结构化抽取：文本、OCR 与表格处理</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../index.html">教程目录</a><strong>中文</strong><a href="../en/demo02/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 02</div></header><main><h1>Demo 02｜PDF 与扫描件结构化抽取：文本、OCR 与表格处理</h1><p class="repository-access-notice">发布提示：技术源码仓库为私有仓库，公开读者可能无法打开源码链接；本页提供经节选的实现代码与实验记录，不包含可直接下载的完整工程。</p>
+<blockquote>
+<p>在线审读候选（未通过逐篇人工验收） · 基于真实工程源码和证据 · 原始技术 Demo 的限定范围 PASS，不代表文章人工验收</p>
+</blockquote>
+<p><strong>工程源码（私有）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/02-document-extraction">02-document-extraction</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39204378860">39204378860</a></p>
+<h2>1. 技术需求与验收条件</h2>
+<p>处理包含电子文本、扫描图像和规则表格的 PDF 文件，输出统一的页级文字、发票字段和表格行。测试输入由 ReportLab 与 Pillow 在运行时生成，包含电子发票 <code>INV-001</code>、扫描发票 <code>SCAN-002</code> 和商品明细表；金额均为 <code>145.80</code>。验收要求 PDF 文本直接解析、扫描页面进入 Tesseract OCR 分支、表格读取到 <code>Widget</code> 与 <code>Service</code> 两条数据。</p>
+<h2>2. 技术方案与执行链</h2>
+<p><code>fitz</code>（PyMuPDF）负责读取 PDF 页面及扫描页渲染；<code>pytesseract</code> 将图像传给 Tesseract OCR；<code>pdfplumber</code> 针对可识别网格提取表格。最后，规则表达式从合并文字中解析票号、日期、总额。这个实现将页面抽取、结构化字段和表格提取保持为独立环节，适合排查某个阶段的错误。</p>
+<h2>3. 核心实现与代码要点</h2>
+<h3>3.1 文本检测与 OCR 分支</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/02-document-extraction/document_extract.py"><code>document_extract.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">text = page.get_text("text").strip()
+method = "pdf_text"
+if not text:
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+    text = pytesseract.image_to_string(img, config="--psm 6").strip()
+    method = "ocr_tesseract"
+</code></pre>
+<p>只有页面可提取文字为空时才切换到 OCR。<code>Matrix(2,2)</code> 提高渲染像素密度，<code>--psm 6</code> 表示采用单个统一文本块布局假设，适合这里的简单票据。对于既含电子文本又含扫描区域的混合页面，这种整页开关可能漏掉图像区域，工程化时应改为块级/区域级判断。<code>method</code> 随页面输出，可以判断实际走了哪条路径。</p>
+<h3>3.2 表格识别与字段解析</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/02-document-extraction/document_extract.py"><code>document_extract.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">for grid in page.extract_tables():
+    tables.append({"page": index + 1, "rows": grid})
+patterns = {
+    "invoice_id": r"Invoice\s*ID\s*:\s*([A-Z0-9-]+)",
+    "date": r"Date\s*:\s*(\d{4}-\d{2}-\d{2})",
+    "total": r"Total\s*:\s*([0-9]+(?:\.[0-9]{2})?)",
+}
+</code></pre>
+<p>表格输出保留页码和原始二维行，不将 <code>Item</code>、<code>Qty</code>、<code>Amount</code> 自动解释为金额关系。正则专门针对英语票据标签与固定日期格式，字段找不到时返回 <code>None</code>。原始程序在不同文档类型上使用同一模式集，因此复杂模板、跨行字段、手写字和国际化票据需要额外解析层。</p>
+<h3>3.3 构造测试输入与断言</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/02-document-extraction/verify_document_e2e.py"><code>verify_document_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">text_pdf(a); scanned_pdf(b); table_pdf(c)
+text = extract_document(str(a))
+scan = extract_document(str(b))
+table = extract_document(str(c))
+assert scan["pages"][0]["method"] == "ocr_tesseract"
+assert scan["fields"]["total"] == "145.80"
+</code></pre>
+<p>由测试程序生成并立即解析三类合成 PDF，避免外部票据权限问题。验收断言检查分支、字段值以及表格行。测试 PDF 存于临时目录，原始 ZIP 中只保存 <code>document_e2e_result.json</code>，因此本批不把后补制作的图片冒充当时的输入文件。</p>
+<h2>4. 运行与真实结果</h2>
+<p>实测状态 <code>PDF_OCR_TABLE_E2E_PASS</code>。电子发票抽取 <code>INV-001 / 2026-10-19 / 145.80</code>；扫描发票抽取 <code>SCAN-002 / 2026-10-19 / 145.80</code>，方法记录为 <code>ocr_tesseract</code>；表格输出为表头与 <code>Widget | 2 | 100.00</code>、<code>Service | 1 | 45.80</code> 两行。此处字段结果来自运行证据 JSON，未产生字段精度或 OCR 字错率统计。</p>
+<table>
+<thead>
+<tr>
+<th>证据字段</th>
+<th>归档值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>PDF_OCR_TABLE_E2E_PASS</td>
+</tr>
+<tr>
+<td><code>pdf_text_fields</code></td>
+<td>{'invoice_id': 'INV-001', 'date': '2026-10-19', 'total': '145.80'}</td>
+</tr>
+<tr>
+<td><code>ocr_fields</code></td>
+<td>{'invoice_id': 'SCAN-002', 'date': '2026-10-19', 'total': '145.80'}</td>
+</tr>
+<tr>
+<td><code>ocr_method</code></td>
+<td>ocr_tesseract</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测素材或源码示意（仅在线审读；见各图标注）</strong>：</p>
+<p><img alt="依据源码绘制的处理流程（示意，非原始 PDF）" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDMyMCI+PGRlZnM+PG1hcmtlciBpZD0iYSIgbWFya2VyV2lkdGg9IjciIG1hcmtlckhlaWdodD0iNyIgcmVmWD0iNyIgcmVmWT0iMy41IiBvcmllbnQ9ImF1dG8iPjxwYXRoIGQ9Ik0wIDAgNyAzLjUgMCA3WiIgZmlsbD0iIzQ1N2ZhYyIvPjwvbWFya2VyPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwMCIgaGVpZ2h0PSIzMjAiIHJ4PSIxOCIgZmlsbD0id2hpdGUiLz48dGV4dCB4PSIzNSIgeT0iNDAiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiMyMzNjNTUiPlBERiDlpITnkIbnu5PmnoTnpLrmhI/vvIjmnaXoh6rmupDnoIHvvIzkuI3mmK/lrp7mtYvmlofmoaPmiKrlm77vvIk8L3RleHQ+PGcgZmlsbD0iI2VmZjVmYiIgc3Ryb2tlPSIjYTJiZmQ2IiBzdHJva2Utd2lkdGg9IjIiPjxyZWN0IHg9IjQ1IiB5PSIxMjAiIHdpZHRoPSIyMDAiIGhlaWdodD0iNzUiIHJ4PSI5Ii8+PHJlY3QgeD0iMzUwIiB5PSI2OCIgd2lkdGg9IjI0MCIgaGVpZ2h0PSI3NSIgcng9IjkiLz48cmVjdCB4PSIzNTAiIHk9IjIwMyIgd2lkdGg9IjI0MCIgaGVpZ2h0PSI3NSIgcng9IjkiLz48cmVjdCB4PSI3MDUiIHk9IjEyMCIgd2lkdGg9IjI1MCIgaGVpZ2h0PSI3NSIgcng9IjkiLz48L2c+PGcgZm9udC1zaXplPSIxOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzI1NWM4MyI+PHRleHQgeD0iMTQ1IiB5PSIxNTAiPlBERiDmlofku7Y8L3RleHQ+PHRleHQgeD0iMTQ1IiB5PSIxNzYiIGZvbnQtc2l6ZT0iMTMiPui+k+WFpTwvdGV4dD48dGV4dCB4PSI0NzAiIHk9IjEwMCI+UHlNdVBERiAvIFRlc3NlcmFjdDwvdGV4dD48dGV4dCB4PSI0NzAiIHk9IjEyNSIgZm9udC1zaXplPSIxMyI+6aG16Z2i5paH5pysIC8gT0NSPC90ZXh0Pjx0ZXh0IHg9IjQ3MCIgeT0iMjM0Ij5wZGZwbHVtYmVyPC90ZXh0Pjx0ZXh0IHg9IjQ3MCIgeT0iMjU4IiBmb250LXNpemU9IjEzIj7nvZHmoLzooajmoLzmj5Dlj5Y8L3RleHQ+PHRleHQgeD0iODMwIiB5PSIxNTEiPue7k+aehOWMliBKU09OPC90ZXh0Pjx0ZXh0IHg9IjgzMCIgeT0iMTc2IiBmb250LXNpemU9IjEzIj5maWVsZHMgLyB0YWJsZXMgLyBwYWdlczwvdGV4dD48L2c+PGcgc3Ryb2tlPSIjNDU3ZmFjIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIG1hcmtlci1lbmQ9InVybCgjYSkiPjxwYXRoIGQ9Ik0yNDUgMTQ1IEwzMTAgMTQ1IEwzMTAgMTA1IEwzNDUgMTA1Ii8+PHBhdGggZD0iTTI0NSAxNzEgTDMxMCAxNzEgTDMxMCAyNDEgTDM0NSAyNDEiLz48cGF0aCBkPSJNNTkwIDEwNSBMNjYwIDEwNSBMNjYwIDE0NSBMNzAxIDE0NSIvPjxwYXRoIGQ9Ik01OTAgMjQxIEw2NjAgMjQxIEw2NjAgMTcwIEw3MDEgMTcwIi8+PC9nPjwvc3ZnPg=="/>
+<em>依据源码绘制的处理流程（示意，非原始 PDF）</em></p>
+<h2>5. 使用与工程集成</h2>
+<p><strong>复现命令（需私有仓库访问权限）</strong></p>
+<pre><code class="language-bash">sudo apt-get install -y tesseract-ocr
 cd projects/02-document-extraction
 python -m pip install -r requirements.txt
-python verify_document_e2e.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">仅构造英文票据、规则字段和清晰扫描；没有验证中文 OCR、手写票据、复杂扫描表格、恶意 PDF、低清晰度图片或生产文档安全。早期归档附件缺失与当前重新实现的云端通过应分别理解。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 02 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_document_e2e.py
+</code></pre>
+<p>实际系统中建议先做文档类型识别，再分别调用文本抽取、区域 OCR、表格解析。保留页码、来源框坐标、识别置信度及校正痕迹，然后再生成结构化业务 JSON。当前实验没有输出坐标与置信度。处理客户文件还需要文件大小上限、恶意文档隔离、脱敏、人工抽样复核与可重试任务队列；这些不属于本次已验证范围。</p>
+<h2>6. 验证边界及来源</h2>
+<p>覆盖三份程序构造的英文样本。未测中文、真实复杂发票、手写、混合扫描页、偏斜、旋转及恶意 PDF。表格金额虽可由行数据算得 <code>145.80</code>，本次程序仅断言提取成功，并未实现发票金额核算。公开页面不标注“任何 PDF 均可稳定抽取”。</p>
+<p><strong>证据出处</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39204378860">Actions Run</a> · <code>evidence/demo02_document_e2e_result.json</code></p>
+<p><strong>发布约束</strong>：私有研究材料不自动转为公开可复现；实测附件和第三方素材需在发布前核对许可、隐私及可访问性。</p>
+</main><footer>公开在线审读 · 内容未人工验收 · 不等同于生产验收</footer></body></html>

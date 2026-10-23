@@ -1,3 +1,69 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 03 · OpenTelemetry：跨服务请求怎样形成可追溯链路？</title><meta name="description" content="企业业务调用跨越网关、后端服务和多个进程时，单条日志很难解释一次请求的整体过程。分布式追踪把同一请求上的 Span 关联起来，让人知道每一段调用在哪里发生以及失败从何而来。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo03/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 03 · 技术导读首版</div><h1>OpenTelemetry：跨服务请求怎样形成可追溯链路？</h1><p class="lead">企业业务调用跨越网关、后端服务和多个进程时，单条日志很难解释一次请求的整体过程。分布式追踪把同一请求上的 Span 关联起来，让人知道每一段调用在哪里发生以及失败从何而来。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>企业业务调用跨越网关、后端服务和多个进程时，单条日志很难解释一次请求的整体过程。分布式追踪把同一请求上的 Span 关联起来，让人知道每一段调用在哪里发生以及失败从何而来。</p></section><section><h2>02｜核心技术与实现机制</h2><p>先用官方 OpenTelemetry Python SDK 在真实独立的网关和后端进程之间传递 W3C traceparent，并以 OTLP/HTTP Protobuf 输出遥测。早期本地探针完成协议级验证；后续 GitHub Actions 的 Docker E2E 启动 Collector 与 Jaeger，从查询接口回读真实 Trace。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>跨进程 HTTP 调用</div><div class="step"><b>02</b>traceparent 上下文传播</div><div class="step"><b>03</b>Collector 接收转发</div><div class="step"><b>04</b>Jaeger 查询 6 条 Trace</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>Docker 流程构建并启动多个服务，产生六次受控 HTTP 请求，等待 Collector 转发到 Jaeger，并检查回读的六条 Trace 含预期的两项服务及业务 Span。协议探针的原始 .pb、解码 JSONL 和请求日志提供额外证据。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真正的 Collector→Jaeger 六条 Trace 专项 E2E 已在 GitHub-hosted Docker 环境成功。原始 README 中“本地机器没有 Docker”的限制是实验早期条件，并不是最后结项状态。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39191820871" target="_blank" rel="noopener noreferrer">GitHub Actions #39191820871</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/03-opentelemetry" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>cd projects/03-opentelemetry
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 03 · OpenTelemetry 链路追踪：Gateway、Backend、Collector 与 Jaeger</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../index.html">教程目录</a><strong>中文</strong><a href="../en/demo03/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 03</div></header><main><h1>Demo 03｜OpenTelemetry 链路追踪：Gateway、Backend、Collector 与 Jaeger</h1><p class="repository-access-notice">发布提示：技术源码仓库为私有仓库，公开读者可能无法打开源码链接；本页提供经节选的实现代码与实验记录，不包含可直接下载的完整工程。</p>
+<blockquote>
+<p>在线审读候选（未通过逐篇人工验收） · 基于真实工程源码和证据 · 原始技术 Demo 的限定范围 PASS，不代表文章人工验收</p>
+</blockquote>
+<p><strong>工程源码（私有）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/03-opentelemetry">03-opentelemetry</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39191820871">39191820871</a></p>
+<h2>1. 技术需求与验收条件</h2>
+<p>追踪一个 HTTP 请求在 Gateway 与 Backend 两个进程中的执行路径，识别客户端请求、后端处理和存储查询之间的父子关系。验证包括正常、慢请求和错误请求，要求 Collector 收到真实 OTLP Span，并由 Jaeger 按 Trace ID 检索。</p>
+<h2>2. 技术方案与执行链</h2>
+<p>Docker Compose 创建 Gateway、Backend、OTel Collector 和 Jaeger 四个服务。Gateway 对外接受请求并调用 Backend；各服务使用 SDK 创建 Span，经 <code>OTLPSpanExporter</code> 输出到 Collector 的 <code>/v1/traces</code>；Collector 再送入 Jaeger。span 的 <code>trace_id</code> 连接整个请求，<code>span_id</code> 和 <code>parent_span_id</code> 定义父子关系，服务名称来自 Resource。</p>
+<h2>3. 核心实现与代码要点</h2>
+<h3>3.1 初始化追踪导出器</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/03-opentelemetry/src/otel_demo/otlp_service.py"><code>src/otel_demo/otlp_service.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">provider = TracerProvider(resource=Resource.create({
+    "service.name": name, "service.version": "2.0-demo"}))
+exporter = OTLPSpanExporter(endpoint=endpoint, timeout=5)
+provider.add_span_processor(BatchSpanProcessor(exporter,
+    schedule_delay_millis=500))
+tracer = provider.get_tracer("otel_demo.otlp_service")
+</code></pre>
+<p><code>service.name</code> 区分 Gateway 与 Backend。<code>BatchSpanProcessor</code> 异步批量导出以降低业务线程直接发请求的开销，<code>schedule_delay_millis=500</code> 是批次调度间隔，不是端到端 SLA。进程清理阶段调用 <code>force_flush()</code> 和 <code>shutdown()</code>，否则快速退出时最后一批 Span 可能丢失。</p>
+<h3>3.2 Collector 接收与导出</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/03-opentelemetry/collector-config.yaml"><code>collector-config.yaml</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-yaml">receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch:
+    timeout: 1s
+exporters:
+  otlp_http/jaeger:
+    endpoint: http://jaeger:4318
+</code></pre>
+<p>两个应用进程指向 <code>http://collector:4318/v1/traces</code>；Collector 使用 OTLP HTTP Receiver 接收，批量处理后发往 Jaeger 容器。这里的 <code>http://jaeger:4318</code> 是 Collector 的 exporter 基础端点，不是浏览器查看端口；Jaeger UI 单独监听 <code>16686</code>。这份配置是工程提交的示例配置，其有效性以端到端运行检查为准。</p>
+<h3>3.3 查询 Jaeger 并验收 Span</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/03-opentelemetry/scripts/verify_collector_jaeger.py"><code>scripts/verify_collector_jaeger.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">REQUIRED = {"gateway.http.request", "gateway.http.client.backend",
+            "backend.http.request", "backend.storage.query"}
+MODES = ("ok", "ok", "ok", "slow", "slow", "error")
+# Verifier polls Jaeger /api/traces/{trace_id} and checks required spans.
+
+</code></pre>
+<p>测试会发起六次请求，并核对状态码：前五次为 <code>200</code>，错误模式为 <code>502</code>。每个 Trace 必须包含四个关键操作、Gateway 和 Backend 两个 service；等待超时仍未在 Jaeger 检索成功则 FAIL。<code>/api/traces/{id}</code> 是 Jaeger UI 的内部接口，不应在生产集成中将它当作稳定外部 API。</p>
+<h2>4. 运行与真实结果</h2>
+<p>该项目的历史 Actions E2E 已记录通过，验证范围为六条正常/慢/错误请求的跨进程链路及 Jaeger 检索。<strong>本轮未从指定 Run 取得原始 Artifact</strong>，因此不展示未经核验的单次延迟数值或真实 Span 时间轴；文中链路图仅用于解释组件关系。复查时应在私有工程运行证据目录补足 <code>docker_e2e_result.json</code>。</p>
+<p><strong>实测素材或源码示意（仅在线审读；见各图标注）</strong>：</p>
+<p><img alt="依据源码绘制的组件拓扑（示意，非实测追踪瀑布图）" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAwIDM0MCI+PGRlZnM+PG1hcmtlciBpZD0iYSIgbWFya2VyV2lkdGg9IjciIG1hcmtlckhlaWdodD0iNyIgcmVmWD0iNyIgcmVmWT0iMy41IiBvcmllbnQ9ImF1dG8iPjxwYXRoIGQ9Ik0wIDAgNyAzLjUgMCA3WiIgZmlsbD0iIzQ1N2ZhYyIvPjwvbWFya2VyPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwMCIgaGVpZ2h0PSIzNDAiIHJ4PSIxOCIgZmlsbD0id2hpdGUiLz48dGV4dCB4PSI0MCIgeT0iNDMiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiMyMzNjNTUiPk9UZWwg5p625p6E56S65oSP77yI6Z2e5a6e6ZmFIFNwYW4g54CR5biD5Zu+77yJPC90ZXh0PjxnIGZpbGw9IiNlZmY1ZmIiIHN0cm9rZT0iI2EyYmZkNiIgc3Ryb2tlLXdpZHRoPSIyIj48cmVjdCB4PSI2MCIgeT0iNzUiIHdpZHRoPSIyODAiIGhlaWdodD0iODAiIHJ4PSIxMiIvPjxyZWN0IHg9IjY2NSIgeT0iNzUiIHdpZHRoPSIyODAiIGhlaWdodD0iODAiIHJ4PSIxMiIvPjxyZWN0IHg9IjIxMCIgeT0iMjM2IiB3aWR0aD0iMjUwIiBoZWlnaHQ9IjcwIiByeD0iMTIiLz48cmVjdCB4PSI1NzAiIHk9IjIzNiIgd2lkdGg9IjI0MCIgaGVpZ2h0PSI3MCIgcng9IjEyIi8+PC9nPjxnIGZvbnQtc2l6ZT0iMTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMyNTVjODMiPjx0ZXh0IHg9IjIwMCIgeT0iMTEwIj5HYXRld2F5PC90ZXh0Pjx0ZXh0IHg9IjIwMCIgeT0iMTM2IiBmb250LXNpemU9IjEzIj5kZW1vLWdhdGV3YXk8L3RleHQ+PHRleHQgeD0iODA1IiB5PSIxMTAiPkJhY2tlbmQ8L3RleHQ+PHRleHQgeD0iODA1IiB5PSIxMzYiIGZvbnQtc2l6ZT0iMTMiPmRlbW8tYmFja2VuZDwvdGV4dD48dGV4dCB4PSIzMzUiIHk9IjI2OSI+T1RlbCBDb2xsZWN0b3I8L3RleHQ+PHRleHQgeD0iMzM1IiB5PSIyOTIiIGZvbnQtc2l6ZT0iMTMiPk9UTFAvSFRUUDwvdGV4dD48dGV4dCB4PSI2OTAiIHk9IjI2OSI+SmFlZ2VyPC90ZXh0Pjx0ZXh0IHg9IjY5MCIgeT0iMjkyIiBmb250LXNpemU9IjEzIj50cmFjZSBzdG9yYWdlICsgVUk8L3RleHQ+PC9nPjxnIHN0cm9rZT0iIzQ1N2ZhYyIgc3Ryb2tlLXdpZHRoPSIyLjQiIGZpbGw9Im5vbmUiIG1hcmtlci1lbmQ9InVybCgjYSkiPjxwYXRoIGQ9Ik0zNDAgMTE1IEg2NjAiLz48cGF0aCBkPSJNMTkwIDE1NSBWMTg5IEgzMDUgVjIzMCIvPjxwYXRoIGQ9Ik04MDAgMTU1IFYxODkgSDM3OCBWMjMwIi8+PHBhdGggZD0iTTQ2MCAyNzAgSDU2NSIvPjwvZz48dGV4dCB4PSI1MDMiIHk9IjEwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzViNzM4NyIgZm9udC1zaXplPSIxMyI+SFRUUCDor7fmsYIgKyB0cmFjZSBjb250ZXh0PC90ZXh0Pjx0ZXh0IHg9IjUyNSIgeT0iMjAwIiBmaWxsPSIjNWI3Mzg3IiBmb250LXNpemU9IjEzIj7lupTnlKjliIbliKvlr7zlh7ogc3BhbnM8L3RleHQ+PC9zdmc+"/>
+<em>依据源码绘制的组件拓扑（示意，非实测追踪瀑布图）</em></p>
+<h2>5. 使用与工程集成</h2>
+<p><strong>复现命令（需私有仓库访问权限）</strong></p>
+<pre><code class="language-bash">cd projects/03-opentelemetry
 python -m pip install -r requirements.txt
-python scripts/run_compose_e2e.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">演示使用合成业务、回环网络和内存 Trace 存储；没有跨机部署、持续存储、生产鉴权、采样策略、真实业务负载或吞吐 SLO。Jaeger 内部查询接口不是稳定公开 API 保证。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 03 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python scripts/run_compose_e2e.py
+</code></pre>
+<p>在现有服务中为 HTTP Server、HTTP Client、数据库查询分别建立 Span，保证下游请求传播上下文。为追踪数据设定采样、敏感属性过滤、保留周期和采集开销预算；应用层告警应结合 metrics/logs，而非只依赖 Trace。Windows 公司设备不能运行 Docker Desktop 时，可在支持 Docker 的 GitHub Actions 环境执行，本项目已有对应 CI 路径。</p>
+<h2>6. 验证边界及来源</h2>
+<p>Jaeger 历史 E2E 通过不等于性能可观测性已生产化。未验证高吞吐丢包率、复杂异步任务因果关系、敏感数据治理和长期存储。此批缺少可独立离线复核的原始 Trace Artifact，按“历史 Run 有证据、原始附件缺口”标注。</p>
+<p><strong>证据出处</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39191820871">Actions Run</a> · 本轮未取得 Run 原始 Artifact</p>
+<p><strong>发布约束</strong>：私有研究材料不自动转为公开可复现；实测附件和第三方素材需在发布前核对许可、隐私及可访问性。</p>
+</main><footer>公开在线审读 · 内容未人工验收 · 不等同于生产验收</footer></body></html>

@@ -1,5 +1,404 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 14 · LLM 工具调用：模型能否自己提出正确的工单操作？</title><meta name="description" content="与程序直接预设函数调用不同，真正的 Agent 工具链要让模型根据用户意图选择函数及参数，再由可信应用决定是否执行。模型提出的建议与业务系统真正产生的副作用必须清晰区分。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo14/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 14 · 双语技术导读</div><h1>LLM 工具调用：模型能否自己提出正确的工单操作？</h1><p class="lead">与程序直接预设函数调用不同，真正的 Agent 工具链要让模型根据用户意图选择函数及参数，再由可信应用决定是否执行。模型提出的建议与业务系统真正产生的副作用必须清晰区分。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>与程序直接预设函数调用不同，真正的 Agent 工具链要让模型根据用户意图选择函数及参数，再由可信应用决定是否执行。模型提出的建议与业务系统真正产生的副作用必须清晰区分。</p></section><section><h2>02｜核心技术与实现机制</h2><p>使用预训练 Qwen2.5-0.5B-Instruct，将 tools 定义传入 tokenizer chat template，在 CPU 上读取真实生成的 tool_call JSON，执行 JSON Schema 校验和应用层布尔批准，再调用 SQLite TicketStore。<div class="flow"><div class="step"><b>01</b>真实 Qwen 生成提议</div><div class="step"><b>02</b>JSON Schema 校验</div><div class="step"><b>03</b>审批拒绝或许可</div><div class="step"><b>04</b>SQLite 状态回读</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>对三条英文指令分别验证 create、get、close 的模型提议和参数；写操作先未批准调用，要求被阻断，再允许相同提议并回读数据库。非法结构和非允许工具反例属于程序构造，未被冒称模型输出。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真实模型输出、审批前后效果与 SQLite 读回都获得专项 CI 成功证据。原始 tool_call_evidence.json 记录模型建议和核验结果，未用固定函数名替换生成内容。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">GitHub Actions #39354577538</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/14-real-tool-calling">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/14-real-tool-calling
+<!doctype html><html lang="zh-CN"><head><meta name="version" content="v0.4-author-accepted"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Demo 14 工程实践教程：LLM 工具声明、Qwen 推理、tool_call 解析、JSON Schema 校验、授权执行、SQLite 幂等和实测证据。"><title>Demo 14｜LLM 工具调用工程实践（代码深化版）</title><style>
+:root{color-scheme:light;--ink:#192d42;--sub:#51667a;--line:#dae3eb;--tint:#f3f6f9;--accent:#075b91}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{background:white;color:var(--ink);font:16px/1.73 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;margin:0}
+.layout{display:grid;grid-template-columns:225px minmax(0,940px);gap:38px;max-width:1250px;margin:0 auto;padding:40px 28px 110px}nav{position:sticky;top:35px;align-self:start;border-right:1px solid var(--line);padding:14px 21px 10px 0}nav .cap{font-size:.75rem;letter-spacing:.08em;font-weight:750;color:#667b8d;margin-bottom:15px;text-transform:uppercase}nav a{font-size:.85rem;color:#405971;display:block;text-decoration:none;padding:6px 3px}nav a:hover{color:var(--accent)}main{min-width:0}h1{font-size:2rem;line-height:1.25;letter-spacing:-.015em;margin:0 0 17px}h2{margin:47px 0 19px;font-size:1.36rem;line-height:1.4;border-bottom:1px solid var(--line);padding-bottom:12px;scroll-margin-top:20px}h3{margin-top:26px;font-size:1.09rem}p{margin:12px 0}blockquote{border-left:3px solid #648da9;background:var(--tint);margin:0 0 26px;padding:12px 17px;color:var(--sub);font-size:.89rem}blockquote p{margin:0}a{color:var(--accent)}strong{font-weight:730}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em}p code,li code,td code{background:#edf2f6;border-radius:4px;padding:2px 4px;color:#124d77}pre{white-space:pre;overflow-x:auto;background:#152737;color:#e8eff5;border:1px solid #1c3449;border-radius:8px;padding:17px 19px;line-height:1.56;margin:13px 0 22px}pre code{background:none;color:inherit;padding:0;font-size:.85rem}table{border-collapse:collapse;width:100%;margin:14px 0 25px;line-height:1.5;font-size:.92rem;display:block;overflow-x:auto}thead{background:#eaf1f6}th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;min-width:110px;vertical-align:top}th{font-weight:720}tr:nth-child(even) td{background:#f9fbfd}ul,ol{padding-left:22px}li{margin:8px 0}a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}main{overflow-wrap:break-word}
+@media(max-width:900px){main{overflow-x:clip}.layout{display:block;padding:23px 17px 75px}nav{position:static;display:flex;gap:8px;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);margin-bottom:25px;padding:5px 0 13px}nav .cap{width:100%;margin-bottom:4px}nav a{border-radius:4px;background:var(--tint);padding:3px 8px}h1{font-size:1.6rem}h2{margin-top:35px}pre{padding:14px}th,td{padding:8px}}
+</style></head><body><div style="background:#edf6fa;padding:10px 20px;font:14px system-ui"><a href="../index.html">← 技术目录</a>　 <a href="../en/demo14/index.html">English (简版)</a></div><div class="layout"><nav aria-label="章节导航"><div class="cap">Demo 14 · Engineering Notes</div><a href="#sec1">1. 技术需求与验收条件</a><a href="#sec2">2. 系统结构与技术组件</a><a href="#sec3">3. 核心实现与代码讲解</a><a href="#sec4">4. 运行步骤与真实结果</a><a href="#sec5">5. 工程集成方式</a><a href="#sec6">6. 技术边界与证据入口</a></nav><main><h1>Demo 14｜LLM 工具调用：工单创建、查询与关闭</h1>
+<blockquote>
+<p>工程实践教程 v0.4 · 2026-10-23 · <strong>工程写作风格已确认；代码讲解深化版，人工审读通过（PASS），已发布 · 公开工程教程</strong><br/>
+工程位置：<code>projects/14-real-tool-calling/</code>（私有） · 实验运行：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">Actions #39354577538</a> · 原始证据：<code>tool_call_evidence.json</code>（已归档）</p>
+</blockquote>
+<h2 id="sec1">1. 技术需求与验收条件</h2>
+<p>在工单系统中接收自然语言请求，由语言模型生成对应的工具名称和参数，再由应用程序执行工单操作。最小业务链路包含三项操作：创建工单、查询工单、关闭工单。</p>
+<p>本实验的输入是三条英文工单请求，目标输出是可解析的工具调用 JSON。应用侧还需要完成参数校验、写操作审批控制、SQLite 数据持久化与结果回读。验收以 <strong>模型真实生成的工具提议</strong> 和 <strong>数据库实际状态</strong> 为准。</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>输入中的关键字段</th>
+<th>期望工具提议</th>
+<th>业务状态检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>创建</td>
+<td><code>request_key=demo-0001</code>，<code>title=Cannot log in</code></td>
+<td><code>create_ticket</code></td>
+<td>未审批不创建；批准后生成 <code>open</code> 工单</td>
+</tr>
+<tr>
+<td>查询</td>
+<td><code>ticket_id=1</code></td>
+<td><code>get_ticket</code></td>
+<td>返回已有工单，状态不变</td>
+</tr>
+<tr>
+<td>关闭</td>
+<td><code>ticket_id=1</code></td>
+<td><code>close_ticket</code></td>
+<td>未审批不关闭；批准后回读到 <code>closed</code></td>
+</tr>
+</tbody>
+</table>
+<p>实验规模限定为三条固定英文请求，用于验证端到端技术链路，不作为工具选择准确率测试。</p>
+<h2 id="sec2">2. 系统结构与技术组件</h2>
+<p>处理链路：</p>
+<pre><code class="language-text">自然语言请求
+   ↓
+Qwen2.5-0.5B-Instruct + 工具定义（Transformers Chat Template）
+   ↓  模型原始 &lt;tool_call&gt; 文本
+解析器（严格提取 JSON）
+   ↓
+工具白名单 + JSON Schema 参数校验
+   ↓
+应用审批检查（allow_mutation）
+   ├─ 未批准的写操作 → DENIED_NO_APPROVAL
+   └─ 允许的操作 → TicketStore → SQLite
+                                  ↓
+                          回读工单与执行状态
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>选用技术</th>
+<th>在本实验中的职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>语言模型</td>
+<td><code>Qwen/Qwen2.5-0.5B-Instruct</code></td>
+<td>根据用户请求选择工具并生成参数</td>
+</tr>
+<tr>
+<td>推理框架</td>
+<td>Hugging Face Transformers、PyTorch CPU</td>
+<td>加载预训练权重并执行生成</td>
+</tr>
+<tr>
+<td>结构校验</td>
+<td><code>jsonschema</code> / Draft 2020-12</td>
+<td>检查允许工具及参数约束</td>
+</tr>
+<tr>
+<td>业务服务</td>
+<td><code>projects/01-mcp-ticket/ticket_store.py</code></td>
+<td>实现工单创建、查询、关闭</td>
+</tr>
+<tr>
+<td>数据存储</td>
+<td>SQLite</td>
+<td>保存工单，支持回读验证</td>
+</tr>
+</tbody>
+</table>
+<p>本次通过 Python 直接调用 <code>TicketStore</code>，没有经过 MCP 网络/协议通信。MCP 连接另见 Demo 01。模型使用开源权重，本实验无需托管模型 API 密钥。</p>
+<h2 id="sec3">3. 核心实现与代码讲解</h2>
+<p>本节按实际执行顺序说明 <code>tool_call_e2e.py</code> 与复用的 <code>ticket_store.py</code>。核心链路由模型推理、结果解析、业务参数校验、执行许可和 SQLite 持久化组成。各步骤的输入、输出和失败条件彼此独立，便于替换模型或业务系统时定位改造范围。</p>
+<h3>3.1 工具声明：函数接口怎样提供给模型</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L25-L61"><code>tool_call_e2e.py</code>，第 25–61 行</a>（私有仓库）。程序把每个工具拆为 <strong>名称、功能描述、参数 Schema</strong>。下面是源代码节选：</p>
+<pre><code class="language-python">TOOL_PARAMETERS = {
+    "create_ticket": {
+        "type": "object", "additionalProperties": False,
+        "required": ["request_key", "title"],
+        "properties": {
+            "request_key": {"type": "string", "pattern": "^[a-z0-9-]{4,32}$"},
+            "title": {"type": "string", "minLength": 3, "maxLength": 100}
+        },
+    },
+    # 另有 get_ticket、close_ticket；均要求整数 ticket_id &gt;= 1
+}
+TOOLS = [
+    {"type": "function", "function": {
+        "name": name,
+        "description": DESCRIPTIONS[name],
+        "parameters": schema
+    }}
+    for name, schema in TOOL_PARAMETERS.items()
+]
+</code></pre>
+<p><strong>实现要点：</strong> <code>TOOLS</code> 的外层 <code>type="function"</code> 告诉聊天模板这是一个可供模型选择的函数；<code>description</code> 告诉模型函数负责的业务动作；<code>parameters</code> 给出模型应填充的字段结构。模型利用这些信息输出 <code>name</code> 和 <code>arguments</code>。<code>request_key</code> 是同一次创建请求的稳定标识，标题长度限制为 3–100 字符；读取和关闭工具使用 <code>ticket_id</code>。</p>
+<p>这里的 Schema 有两个用途：<strong>给模型提供接口约定</strong>，以及 <strong>给应用侧提供强制校验规则</strong>。模型即使看到 Schema，仍可能输出不合规字段，所以后续执行器必须再次验证。<code>additionalProperties=False</code> 能禁止未声明的字段进入执行层，例如模型输出的 <code>approved</code> 不能被当成授权凭据。上述代码中的 <code>#</code> 为教程为说明省略项添加的注释，完整工具定义以链接源码为准。</p>
+<h3>3.2 模型输入与生成：自然语言怎样变为工具提议</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L107-L133"><code>propose()</code>，第 107–133 行</a>。模型消息由系统指令和用户请求组成，工具定义作为 <code>apply_chat_template()</code> 的独立参数传入：</p>
+<pre><code class="language-python">prompt = tokenizer.apply_chat_template(
+    msgs, tools=TOOLS, tokenize=False, add_generation_prompt=True
+)
+inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1800)
+with torch.inference_mode():
+    tokens = model.generate(
+        **inputs, do_sample=False, max_new_tokens=140,
+        pad_token_id=tokenizer.eos_token_id
+    )
+text = tokenizer.decode(
+    tokens[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
+).strip()
+</code></pre>
+<p><strong>实现要点：</strong> <code>apply_chat_template()</code> 负责按 Qwen2.5 的聊天格式组织角色消息和工具声明。<code>add_generation_prompt=True</code> 让输入停在模型应开始回答的位置；<code>tokenize=False</code> 表示先得到完整提示文本，再由 <code>tokenizer(...)</code> 转为张量。<code>torch.inference_mode()</code> 关闭梯度跟踪，适合只做推理的链路。</p>
+<p><code>model.generate()</code> 返回的 token 序列包含提示词和新生成内容，因此使用 <code>inputs["input_ids"].shape[1]</code> 切片，<strong>只解码模型新生成的 token</strong>。若直接解码整个序列，解析器可能读到输入中的工具定义或用户文本。<code>do_sample=False</code> 采用非采样生成，便于固定案例复现，但不能保证不同模型版本、环境下始终选择正确工具；<code>max_new_tokens=140</code> 是本次短工具输出的生成预算，复杂参数可能需要调整。</p>
+<p><code>propose()</code> 返回 <code>user_request</code>、<code>raw_model_output</code>、<code>model_proposal</code> 和 <code>prompt_format</code>，因此实验能够区分用户原始输入、模型真正生成的文本与解析结果。</p>
+<h3>3.3 输出解析：只接受一个结构完整的工具调用</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L61-L77"><code>parse_tool_call()</code>，第 61–77 行</a>。模型在本实验中输出包含 <code>&lt;tool_call&gt;</code> 标签的文本。执行器要求输出完全满足既定格式：</p>
+<pre><code class="language-python">CALL_REGEX = re.compile(r"&lt;tool_call&gt;\s*(\{.*?\})\s*&lt;/tool_call&gt;", re.DOTALL)
+
+def parse_tool_call(generated: str) -&gt; dict:
+    matches = list(CALL_REGEX.finditer(generated))
+    if len(matches) != 1:
+        raise ValueError("Model must emit exactly one complete tool_call block")
+    if generated[:matches[0].start()].strip() or generated[matches[0].end():].strip():
+        raise ValueError("Model emitted text outside tool_call")
+    obj = json.loads(matches[0].group(1))
+    if not isinstance(obj, dict) or set(obj) != {"name", "arguments"}:
+        raise ValueError("Tool call envelope must contain exactly name and arguments")
+    if not isinstance(obj["name"], str) or not isinstance(obj["arguments"], dict):
+        raise ValueError("Tool name and arguments must have correct types")
+    return obj
+</code></pre>
+<p><strong>实现要点：</strong> 正则表达式定位完整标签块，<code>finditer()</code> 控制只能出现一次，块外文字检查阻止模型在调用前后混入说明文本。<code>json.loads()</code> 负责真正的 JSON 解析，随后检查外层只有 <code>name</code>、<code>arguments</code> 两个键，且类型正确。任一步不符合约定都会抛出异常，业务方法不会被调用。</p>
+<p>这段解析逻辑专用于本实验使用的 Qwen 文本模板，并非通用 JSON 语法解析器。改用服务商原生 Tool Calling API 时，应优先解析 API 返回的结构化工具字段，而不是照搬该标签正则。<strong>解析格式正确只证明输出可读取</strong>，工具是否允许及参数是否合格由下一步检查。</p>
+<h3>3.4 参数校验：执行前重新验证模型输出</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L79-L86"><code>validate_proposal()</code>，第 79–86 行</a>。</p>
+<pre><code class="language-python">def validate_proposal(proposal: dict) -&gt; dict:
+    if not isinstance(proposal, dict) or set(proposal) != {"name", "arguments"}:
+        raise ValueError("Invalid tool call envelope")
+    name = proposal["name"]
+    if not isinstance(name, str) or name not in TOOL_PARAMETERS:
+        raise ValueError("Unknown or disallowed tool")
+    Draft202012Validator(TOOL_PARAMETERS[name]).validate(proposal["arguments"])
+    return proposal
+</code></pre>
+<p><strong>实现要点：</strong> 先按工具名检查白名单，随后为当前工具选取对应的 JSON Schema。<code>Draft202012Validator.validate()</code> 校验必填字段、字段类型、范围和额外属性；失败时抛出 <code>ValidationError</code>。例如 <code>ticket_id="1"</code> 是字符串而非整数，会在这里被拒绝；<code>drop_database</code> 不在白名单中，也无法执行。</p>
+<p>校验与业务执行分离后，既可针对解析器测试格式容错，也可针对验证器独立构造越界输入。这里的校验属于<strong>接口结构与数值约束</strong>，企业应用还需要独立完成调用人的身份识别、工单归属检查、资源权限和业务状态检查。</p>
+<h3>3.5 审批与路由：模型不能自行给写操作授权</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L89-L104"><code>execute_proposal()</code>，第 89–104 行</a>。</p>
+<pre><code class="language-python">def execute_proposal(proposal: dict, store: TicketStore, *, allow_mutation: bool) -&gt; dict:
+    validate_proposal(proposal)
+    name = proposal["name"]
+    args = proposal["arguments"]
+    if name in ("create_ticket", "close_ticket") and not allow_mutation:
+        return {"status": "DENIED_NO_APPROVAL", "name": name, "executed": False}
+    if name == "create_ticket":
+        record = store.create(args["request_key"], args["title"])
+    elif name == "get_ticket":
+        record = store.get(args["ticket_id"])
+    elif name == "close_ticket":
+        record = store.close(args["ticket_id"])
+    else:
+        raise AssertionError("Unreachable tool")
+    return {"status": "EXECUTED", "name": name, "executed": True, "ticket": record}
+</code></pre>
+<p><strong>实现要点：</strong> 执行器以“先校验、再授权、最后调用存储”的顺序处理提议。<code>allow_mutation</code> 是业务应用在调用函数时传入的<strong>独立关键字参数</strong>；模型只提供 <code>proposal</code>，无法通过向 <code>arguments</code> 增加字段来修改它。未批准时直接返回 <code>executed=False</code>，不会进入 <code>store.create()</code> 或 <code>store.close()</code>；读取工具在本 Demo 中不受此布尔写入闸门控制。</p>
+<p>这一层是可替换的业务执行入口。接入真实服务时，<code>allow_mutation</code> 应由经过认证的身份、资源权限和审批状态共同决定，不能让用户消息或模型自行设置。读取权限也需要单独校验。<code>get_ticket()</code> 在记录不存在时可能返回 <code>None</code>；本次固定案例用断言确认记录存在，生产接口还需将空记录、存储异常映射为明确的业务错误。</p>
+<h3>3.6 SQLite 幂等：重复创建为什么不会产生第二张工单</h3>
+<p>业务实现位于 <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/ticket_store.py#L15-L48"><code>projects/01-mcp-ticket/ticket_store.py</code>，第 15–48 行</a>。Demo 14 直接调用这一现有模块。建表和创建逻辑的关键源码为：</p>
+<pre><code class="language-python"># 建表约束中的关键字段（代码节选）
+request_key TEXT NOT NULL UNIQUE,
+status TEXT NOT NULL DEFAULT 'open'
+    CHECK(status IN ('open', 'closed'))
+
+# TicketStore.create() 中的关键操作（代码节选）
+with self._connect() as db:
+    db.execute("INSERT OR IGNORE INTO tickets(request_key,title) VALUES (?,?)",
+               (request_key, title))
+    row = db.execute("SELECT * FROM tickets WHERE request_key = ?",
+                     (request_key,)).fetchone()
+    if row["title"] != title:
+        raise ValueError("idempotency key reused with different title")
+    return dict(row)
+</code></pre>
+<p><strong>实现要点：</strong> <code>request_key</code> 的唯一索引在数据库层限制重复插入；<code>INSERT OR IGNORE</code> 遇到已有请求键时保留原行，随后按 <code>request_key</code> 查回记录。同一请求键、同一标题重复调用 <code>create()</code>，返回原工单 ID；如果请求键相同但标题不同，则通过标题比较抛出错误，防止悄悄把不同业务请求当成同一次操作。SQL 中的 <code>?</code> 是参数占位符，避免拼接文本形成 SQL 注入风险。</p>
+<p>本次实测的同一创建请求重试后仍是 <code>id=1</code>、总数为 1。<code>TicketStore.close()</code> 通过 <code>UPDATE ... WHERE id=?</code> 修改状态并再次 <code>SELECT</code>，不存在的工单会抛出 <code>ValueError</code>；关闭后的独立新实例回读验证了状态已持久化。<strong>幂等约束发生在业务存储层，不是由大模型保证。</strong> 更复杂的生产系统还需要明确请求键有效期、并发重试、事务隔离和审计策略。</p>
+<h3>3.7 测试与证据：区分模型输出、模拟错误和数据库结果</h3>
+<p>源文件：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L136-L237"><code>run()</code>，第 136–237 行</a>。测试顺序是模型提议创建 → 未授权拒绝 → 授权创建 → 重试同一请求 → 模型提议查询 → 模型提议关闭 → 未授权拒绝 → 授权关闭 → 数据库新实例回读。核心断言节选：</p>
+<pre><code class="language-python">created = propose(model, tokenizer,
+    'Create a support ticket. The request_key is "demo-0001" and the title is "Cannot log in".')
+assert created["model_proposal"]["name"] == "create_ticket"
+denied = execute_proposal(created["model_proposal"], store, allow_mutation=False)
+assert denied["status"] == "DENIED_NO_APPROVAL" and store.count() == 0
+approved = execute_proposal(created["model_proposal"], store, allow_mutation=True)
+ticket_id = approved["ticket"]["id"]
+retry = execute_proposal(created["model_proposal"], store, allow_mutation=True)
+assert retry["ticket"]["id"] == ticket_id and store.count() == 1
+</code></pre>
+<p><strong>实现要点：</strong> <code>propose()</code> 在每条正常请求上真实调用预训练模型，<code>assert</code> 将模型选择工具、参数值和数据库读回纳入运行是否成功的条件。源码还另外用程序构造四个异常提议检查 Schema 与白名单，记录在 <code>crafted_invalid_proposals_rejected</code>；这些反例不能计为“模型主动犯错”。</p>
+<p><code>tool_call_e2e.py</code> 会把成功结果写入 <code>tool_call_evidence.json</code>；推理或断言异常时，<code>main()</code> 写入 <code>REAL_LLM_TOOL_CALL_BLOCKED</code> 失败记录并重新抛出异常，使 CI 显示失败。随后 <code>verify_evidence.py</code> 对 JSON 中三次模型提议、审批拒绝、SQLite 状态、四个构造反例等字段做<strong>独立文件核验</strong>；它本身不重新加载模型推理。这样的分层能分别检查“真实执行是否通过”和“保留下来的证据是否符合预期”。</p>
+<h3>3.8 调试与改造检查点</h3>
+<table>
+<thead>
+<tr>
+<th>观察到的现象</th>
+<th>优先检查的代码位置</th>
+<th>具体检查内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型没有给出一个完整工具调用</td>
+<td><code>propose()</code>、<code>parse_tool_call()</code></td>
+<td><code>raw_model_output</code>、聊天模板、生成长度、模型版本、标签外文字</td>
+</tr>
+<tr>
+<td>工具名正确但参数校验失败</td>
+<td><code>validate_proposal()</code></td>
+<td>工具白名单、必填键、字段类型、<code>additionalProperties</code>、长度/正则限制</td>
+</tr>
+<tr>
+<td>模型提议正确但写入未发生</td>
+<td><code>execute_proposal()</code></td>
+<td><code>allow_mutation</code> 是否由可信应用批准、返回的 <code>DENIED_NO_APPROVAL</code></td>
+</tr>
+<tr>
+<td>创建重试没有达到预期</td>
+<td><code>TicketStore.create()</code></td>
+<td><code>request_key</code> 唯一性、原记录标题是否一致、SQLite 实际行数</td>
+</tr>
+<tr>
+<td>CI 成功但证据字段不完整</td>
+<td><code>tool_call_e2e.py</code>、<code>verify_evidence.py</code></td>
+<td>运行状态、<code>events</code>、<code>sqlite_readback</code>、原始 JSON 是否对应当前运行</td>
+</tr>
+</tbody>
+</table>
+<p>本节代码为真实项目的节选。Schema 和 SQLite 的局部摘录特意省略了外围字典/建表语句，不能直接拼接成独立可运行程序；完整执行入口仍使用工程中的 <code>tool_call_e2e.py</code>。</p>
+<h2 id="sec4">4. 运行步骤与真实结果</h2>
+<h3>4.1 运行环境和命令</h3>
+<ul>
+<li>CI 环境：GitHub-hosted Ubuntu 24.04，Python 3.12.15，CPU。</li>
+<li>模型：<code>Qwen/Qwen2.5-0.5B-Instruct</code>；本次解析提交：<code>7ae557604adf67be50417f59c2c2f167def9a775</code>。</li>
+<li>依赖：<code>transformers&gt;=4.45,&lt;5</code>、<code>torch&gt;=2.3,&lt;3</code>、<code>jsonschema&gt;=4.21,&lt;5</code>。</li>
+</ul>
+<p>在具备<strong>私有仓库访问权限</strong>的完整工程目录中执行：</p>
+<pre><code class="language-bash">cd projects/14-real-tool-calling
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python tool_call_e2e.py
-python verify_evidence.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">审批仅可信应用布尔开关，不是经过身份验证的人类授权；未验证 MCP 传输、供应商原生工具调用 API、多语言稳定性或安全生产策略。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 14 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_evidence.py
+</code></pre>
+<p>程序生成 <code>tool_call_evidence.json</code>，独立验证器成功时打印 <code>REAL_LLM_TOOL_CALL_EVIDENCE_VERIFIED</code>。首次运行需要联网下载模型权重。</p>
+<h3>4.2 模型实际输出</h3>
+<p>第一次输入：</p>
+<pre><code class="language-text">Create a support ticket. The request_key is "demo-0001" and the title is "Cannot log in".
+</code></pre>
+<p>原始模型响应（摘自 <code>events[0].raw_model_output</code>）：</p>
+<pre><code class="language-xml">&lt;tool_call&gt;
+{"name": "create_ticket", "arguments": {"request_key": "demo-0001", "title": "Cannot log in"}}
+&lt;/tool_call&gt;
+</code></pre>
+<p>其余两次模型调用的结果分别为：</p>
+<pre><code class="language-json">{"name": "get_ticket", "arguments": {"ticket_id": 1}}
+{"name": "close_ticket", "arguments": {"ticket_id": 1}}
+</code></pre>
+<h3>4.3 执行状态与数据库回读</h3>
+<table>
+<thead>
+<tr>
+<th>测试步骤</th>
+<th>执行结果（实测）</th>
+<th>数据库检查（实测）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>创建、未审批</td>
+<td><code>DENIED_NO_APPROVAL</code>，<code>executed=false</code></td>
+<td>工单数保持 0</td>
+</tr>
+<tr>
+<td>创建、已审批</td>
+<td><code>EXECUTED</code></td>
+<td><code>id=1</code>，<code>status=open</code></td>
+</tr>
+<tr>
+<td>同一请求重试</td>
+<td><code>EXECUTED</code></td>
+<td>仍返回 <code>id=1</code>，工单总数 1</td>
+</tr>
+<tr>
+<td>查询</td>
+<td><code>EXECUTED</code></td>
+<td>读取 <code>id=1</code>，<code>status=open</code></td>
+</tr>
+<tr>
+<td>关闭、未审批</td>
+<td><code>DENIED_NO_APPROVAL</code>，<code>executed=false</code></td>
+<td>状态保持 <code>open</code></td>
+</tr>
+<tr>
+<td>关闭、已审批</td>
+<td><code>EXECUTED</code></td>
+<td>新建 <code>TicketStore</code> 实例回读 <code>status=closed</code></td>
+</tr>
+</tbody>
+</table>
+<p>以上为 <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">Run #39354577538</a> 归档证据 JSON 的逐项整理，不是模拟输出。最终 <code>status=REAL_LLM_TOOL_CALL_E2E_PASS</code>，<code>model_generated_tool_calls=3</code>，<code>final_ticket_count=1</code>。</p>
+<h3>4.4 非法参数测试</h3>
+<p>源程序另外构造四种非法提议，检查执行器是否拒绝：</p>
+<table>
+<thead>
+<tr>
+<th>构造输入</th>
+<th>验证结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>非法 <code>request_key="bad key"</code></td>
+<td><code>ValidationError</code></td>
+</tr>
+<tr>
+<td><code>create_ticket</code> 多带 <code>approved=true</code></td>
+<td><code>ValidationError</code></td>
+</tr>
+<tr>
+<td>未注册工具 <code>drop_database</code></td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>ticket_id="1"</code>（字符串）</td>
+<td><code>ValidationError</code></td>
+</tr>
+</tbody>
+</table>
+<p>这四项是<strong>程序构造的负测试</strong>，不是模型在本次运行中生成的工具提议。</p>
+<h2 id="sec5">5. 工程集成方式</h2>
+<p>在企业应用中，可把工具调用处理拆成三个接口层：</p>
+<ol>
+<li><strong>模型适配层</strong>：传入用户请求、允许的工具定义，输出候选 <code>name/arguments</code>；记录原始模型输出与模型版本。</li>
+<li><strong>业务执行网关</strong>：解析并校验候选调用；结合登录用户身份、资源权限、动作风险和审批状态计算执行许可；对写操作保留审计与幂等信息。</li>
+<li><strong>业务服务层</strong>：把通过审核的工具调用映射为现有工单 API 或服务方法，返回工单 ID、状态、执行错误及持久化回读结果。</li>
+</ol>
+<p>Demo 14 的 <code>execute_proposal()</code> 可以作为执行网关的最小结构示例。工程改造时可保留 <code>propose() → parse_tool_call() → validate_proposal()</code> 的接口边界，将 <code>allow_mutation</code> 替换为基于认证上下文的权限判定，并将 <code>store.create/get/close</code> 替换为业务 API 调用。接入现有 HTTP 工单服务时，需要替换 <code>TicketStore</code> 的直接调用，增加接口认证、错误处理、超时、重试与审计。若使用 MCP，可把业务服务包装为 MCP Server，并由应用的 MCP Client 执行调用；工具调用提议与执行授权的责任划分仍需保留。</p>
+<p>适用范围是<strong>自然语言表达存在变化、工具接口明确、动作有可校验业务结果</strong>的流程。高风险写入操作应由业务权限系统和审批流程作最终决定，不能仅依赖模型的输出。</p>
+<h2 id="sec6">6. 技术边界与证据入口</h2>
+<p>本次已验证三条英文请求上的模型工具选择、参数提取、Schema 校验、应用布尔审批、SQLite 写入与回读，以及四个构造非法输入的拒绝。尚未验证跨用户权限、多语言工具选择准确率、并发、提示词注入、生产审计、完整人审工作流和模型跨版本稳定性。</p>
+<p>模型加载请求使用可变的 <code>main</code> 修订；文档记录的是<strong>本次运行解析出的具体提交</strong>，后续严格复现应显式固定该提交。审批标志 <code>allow_mutation</code> 是实验控制参数，生产实现需要经过认证的授权上下文。</p>
+<table>
+<thead>
+<tr>
+<th>资料</th>
+<th>入口与性质</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真实执行记录</td>
+<td><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">GitHub Actions #39354577538</a>（私有访问可能受限）</td>
+</tr>
+<tr>
+<td>源码及测试</td>
+<td><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/14-real-tool-calling"><code>projects/14-real-tool-calling/</code></a>（私有）</td>
+</tr>
+<tr>
+<td>原始证据</td>
+<td><code>tool_call_evidence.json</code>，资料库中 <code>demo14_real_tool_calling_artifact.zip</code>（私有归档）</td>
+</tr>
+<tr>
+<td>独立核验</td>
+<td><code>verify_evidence.py</code>，核验 3 次提议、审批拒绝、SQLite 最终状态等字段</td>
+</tr>
+</tbody>
+</table>
+<p><strong>发布状态：在线审读候选。</strong> 尚未提供独立公开的源代码复现包，也未修改公开教程网站。</p>
+</main></div></body></html>

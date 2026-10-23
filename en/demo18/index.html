@@ -1,5 +1,95 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 18 · LayoutLMv3: word-role prediction on scanned forms</title><meta name="description" content="Understanding scanned forms requires both text and two-dimensional layout. Identifying words as headers, questions or answers is a useful intermediate task, but"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo18/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 18 · TECHNICAL FIELD GUIDE</div><h1>LayoutLMv3: word-role prediction on scanned forms</h1><p class="lead">Understanding scanned forms requires both text and two-dimensional layout. Identifying words as headers, questions or answers is a useful intermediate task, but a successful forward pass does not guarantee correct business field extraction.</p><p><a href="../index.html">← Back to all 27 demos</a></p><section><h2>01｜The problem to solve</h2><p>Understanding scanned forms requires both text and two-dimensional layout. Identifying words as headers, questions or answers is a useful intermediate task, but a successful forward pass does not guarantee correct business field extraction.</p></section><section><h2>02｜How the technology works</h2><p>A genuine FUNSD-finetuned LayoutLMv3 receives two public form images, provided OCR words and normalized bounding boxes, with built-in OCR disabled. Real CPU inference yields BIO word-role predictions, which are compared with gold labels after inference.<div class="flow"><div class="step"><b>01</b>Load two FUNSD forms</div><div class="step"><b>02</b>Pixels + words + boxes</div><div class="step"><b>03</b>Run LayoutLMv3 roles</div><div class="step"><b>04</b>Compare 390 label pairs</div></div><p class="small">A schematic of the implementation steps, not an actual model output plot.</p></p></section><section><h2>03｜Actual experiment inputs</h2><p>The two held-out public FUNSD forms contain 223 and 167 words, 390 total. The model assigned non-O roles to 174 words; word-label agreement was 83/223 (37.22%) and 112/167 (67.07%) respectively.</p></section><section><h2>04｜Observed result and independent evidence</h2><p>Genuine model execution and independent artifact verification passed, yet combined word-level label agreement was only 195/390 (50.0%). That weak small-sample quality result is preserved rather than hidden behind the technical PASS.<div class="proof"><strong>Scope-bounded E2E PASS</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">GitHub Actions #39367224381</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/18-document-layout">Engineering source (private)</a></div></p></section><section><h2>05｜Reproduce from the repository</h2><p>Run this reference command in the documented engineering environment.<pre><code>cd projects/18-document-layout
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 18 · LayoutLMv3 form understanding: image, word boxes and BIO predictions</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../../index.html">Tutorial catalog</a><strong>English</strong><a href="../../demo18/index.html" lang="zh-CN">中文</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 18</div></header><main><h1>Demo 18｜LayoutLMv3 form understanding: image, word boxes and BIO predictions</h1><p class="repository-access-notice">Source access: the engineering source repository is private and its GitHub links may be inaccessible to public readers. Code excerpts and scope-bounded experimental evidence are reproduced on this page; the complete project is not public.</p>
+<blockquote>
+<p>Public review draft · source-backed · original Demo E2E passed within scope; article not yet human-accepted</p>
+</blockquote>
+<p><strong>Source code (private)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/18-document-layout">18-document-layout</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">39367224381</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Classify word-level form roles from image pixels, dataset-provided OCR words and boxes with a FUNSD-finetuned LayoutLMv3. Two test forms validate multimodal forward passes, wordpiece alignment and BIO role predictions. OCR is not executed by this demo.</p>
+<h2>2. Architecture and execution path</h2>
+<p>Hugging Face Datasets loads <code>test[:2]</code>. AutoProcessor with <code>apply_ocr=False</code> encodes image pixels, tokens and normalized 0–1000 boxes. A seven-class token head outputs BIO logits. Wordpiece tokenization requires <code>word_ids()</code> alignment so each original word is counted once.</p>
+<h2>3. Core implementation</h2>
+<h3>3.1 Validate OCR word and box alignment</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">if len(words) != len(boxes) or len(words) != len(gold_tags):
+    raise ValueError("Misaligned words / boxes / reference labels")
+if (len(box) != 4 or any(type(x) is not int or
+    not 0 &lt;= x &lt;= 1000 for x in box)):
+    raise ValueError("Invalid normalized document bounding box")
+</code></pre>
+<p>OCR tokens, boxes and labels must align one-to-one. LayoutLM-style coordinates are normalized to 0–1000. Pixel boxes from a real OCR engine must be normalized against page dimensions, accounting for any crop or rotation.</p>
+<h3>3.2 Processor inputs and model forward pass</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">processor = AutoProcessor.from_pretrained(MODEL_ID, apply_ocr=False)
+encoded = processor(image, words, boxes=boxes, return_tensors="pt",
+                    truncation=True, max_length=512)
+with torch.inference_mode():
+    logits = model(**encoded).logits
+    probabilities = logits.softmax(dim=-1)
+</code></pre>
+<p>The OCR switch is disabled because FUNSD already supplies word boxes. <code>max_length=512</code> can truncate large forms, although neither test sample was truncated. Softmax and argmax select one of seven roles; maximum score is not necessarily a calibrated business confidence.</p>
+<h3>3.3 Align wordpieces and evaluate roles</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/18-document-layout/layout_e2e.py"><code>layout_e2e.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">aligned = first_wordpieces(encoded.word_ids(batch_index=0), len(words))
+for pos, word_id in aligned:
+    prob = probabilities[0, pos]
+    label_index = int(prob.argmax().item())
+    predicted.append({"word": words[word_id],
+        "predicted_label": LABELS[label_index],
+        "gold_label": LABELS[gold[word_id]]})
+</code></pre>
+<p>Selecting the first wordpiece per source word avoids duplicate counting. BIO marks span beginnings, continuations and unrelated tokens. Labels are not yet question–answer relations. The simple reference-match fraction is descriptive for the sampled words, not an end-to-end document extraction benchmark.</p>
+<h2>4. Execution and observed results</h2>
+<p>Evidence <code>FINETUNED_LAYOUTLMV3_E2E_PASS</code>: 223 and 167 covered words, with 83 and 112 matches respectively (0.3722 / 0.6707). Combined: 390 words, 195 reference matches, a descriptive word-level fraction of 0.5000; 174 predicted labels are not <code>O</code>. These two samples do not establish general form-understanding accuracy.</p>
+<table>
+<thead>
+<tr>
+<th>Evidence field</th>
+<th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>FINETUNED_LAYOUTLMV3_E2E_PASS</td>
+</tr>
+<tr>
+<td><code>covered_words</code></td>
+<td>390</td>
+</tr>
+<tr>
+<td><code>reference_matches</code></td>
+<td>195</td>
+</tr>
+<tr>
+<td><code>descriptive_word_accuracy</code></td>
+<td>0.5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Evidence visuals or code-derived schematics (internal review; labeled per item):</strong></p>
+<p><p class="source-note">Original FUNSD form scans and annotated overlays are not republished in this public preview; word-level predicted labels and metrics are described below.</p>
+<em>Form 01: overlays derived from model predictions</em></p>
+<p><p class="source-note">Original FUNSD form scans and annotated overlays are not republished in this public preview; word-level predicted labels and metrics are described below.</p>
+<em>Form 02: overlays derived from model predictions</em></p>
+<h2>5. Integration and operational design</h2>
+<p><strong>Reproduction commands (requires private repo access)</strong></p>
+<pre><code class="language-bash">cd projects/18-document-layout
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python layout_e2e.py
-python verify_evidence.py</code></pre><p class="small">Source and Actions may require private-repository access; this public lesson contains no redistributed model weights or private data.</p></p></section><section><h2>06｜What cannot be concluded</h2><p><div class="note">OCR words and boxes come from the dataset; no fresh OCR is performed. Word-role labels do not link questions to answers or produce reliable key/value JSON. The 50.0% figure is a two-sample observation, not an official full FUNSD benchmark.</div><p>This is a first bilingual technical orientation. It is not yet as deeply illustrated as the six established full lessons; future iterations will enrich it with verified charts and practical scenarios.</p></p></section><footer>Demo 18 · Evidence-linked bilingual engineering guide · <a href="../index.html">All demos</a></footer></main></body></html>
+python verify_evidence.py
+</code></pre>
+<p>A document system can feed OCR tokens and normalized boxes into a layout classifier, group BIO spans and then associate questions with answers using spatial or relational logic. This span assembly and field linking are not implemented here. OCR errors propagate into downstream role predictions.</p>
+<h2>6. Limits and evidence</h2>
+<p>Two FUNSD test forms only. Third-party image redistribution rights need review. OCR, key-value pairing, Chinese and business forms were not tested. The internal overlays show model predictions, not dataset ground truth.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39367224381">Actions Run</a> · <code>evidence/demo18_layout_evidence.json</code></p>
+<p><strong>Publication restriction:</strong> Private source and third-party evidence are not automatically cleared for public redistribution or replication.</p>
+</main><footer>Public review draft · Not publicly released · Not production validated</footer></body></html>

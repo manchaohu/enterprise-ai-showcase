@@ -1,5 +1,92 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 15 · VLM：同一句提问，模型会根据图片变化回答吗？</title><meta name="description" content="视觉语言模型不只是给图片贴类别，也需要在自然语言问题的引导下读取像素并生成答案。测试时让两张图片仅颜色不同，可以观察生成文本是否受真正的视觉输入影响。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo15/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 15 · 双语技术导读</div><h1>VLM：同一句提问，模型会根据图片变化回答吗？</h1><p class="lead">视觉语言模型不只是给图片贴类别，也需要在自然语言问题的引导下读取像素并生成答案。测试时让两张图片仅颜色不同，可以观察生成文本是否受真正的视觉输入影响。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>视觉语言模型不只是给图片贴类别，也需要在自然语言问题的引导下读取像素并生成答案。测试时让两张图片仅颜色不同，可以观察生成文本是否受真正的视觉输入影响。</p></section><section><h2>02｜核心技术与实现机制</h2><p>在 CPU 上加载预训练 HuggingFaceTB/SmolVLM-256M-Instruct，两张 Pillow PNG 除色块红/蓝不同外形状与背景均相同。模型接受真实像素与完全一致的问题，输出文本并经过独立颜色验证。<div class="flow"><div class="step"><b>01</b>构造红/蓝两张图</div><div class="step"><b>02</b>像素传入 SmolVLM</div><div class="step"><b>03</b>相同问题分别生成</div><div class="step"><b>04</b>检查真实颜色文本</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>生成两张 512×512 合成色块图片，颜色真值和文件名不会进入模型提问；保存两张图的 SHA-256、输入张量、生成结果与独立验证数据。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真实模型两次生成的关键回答分别为 Red 和 Blue，专项 E2E 与后续回归成功，Artifact 包含原始 PNG 与证明结果来自图片差异的校验。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39356642564">GitHub Actions #39356642564</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/15-real-vlm">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/15-real-vlm
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 15 · 视觉语言模型：SmolVLM 图像条件问答与答案检查</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../index.html">教程目录</a><strong>中文</strong><a href="../en/demo15/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 15</div></header><main><h1>Demo 15｜视觉语言模型：SmolVLM 图像条件问答与答案检查</h1><p class="repository-access-notice">发布提示：技术源码仓库为私有仓库，公开读者可能无法打开源码链接；本页提供经节选的实现代码与实验记录，不包含可直接下载的完整工程。</p>
+<blockquote>
+<p>在线审读候选（未通过逐篇人工验收） · 基于真实工程源码和证据 · 原始技术 Demo 的限定范围 PASS，不代表文章人工验收</p>
+</blockquote>
+<p><strong>工程源码（私有）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/15-real-vlm">15-real-vlm</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39356642564">39356642564</a></p>
+<h2>1. 技术需求与验收条件</h2>
+<p>为模型提供两张颜色不同的合成图片，在完全相同的英文问题下得到对应颜色答案。输入必须包含实际像素张量，且模型需真实执行推理。测试的目标是验证图像条件是否参与问答链路，而非评估现实图片的通用理解能力。</p>
+<h2>2. 技术方案与执行链</h2>
+<p>Pillow 创建 512×512 白色底图和一个大色块。<code>AutoProcessor</code> 将图片和对话模板编码成模型输入；<code>AutoModelForVision2Seq</code> 采用 SmolVLM-256M-Instruct CPU float32 前向生成，再从输出 Token 中裁剪提示部分并解码答案。测试分别核对 red 和 blue，记录图片 SHA-256、输入像素张量形状及真实回答。</p>
+<h2>3. 核心实现与代码要点</h2>
+<h3>3.1 构造图像与图像证据</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/15-real-vlm/vlm_e2e.py"><code>vlm_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">image = Image.new("RGB", (512, 512), "white")
+ImageDraw.Draw(image).rectangle((40, 40, 471, 471), fill=rgb)
+image.save(destination, format="PNG")
+</code></pre>
+<p>图片是有明确真实 RGB 参数的程序生成测试数据。固定底色、形状和问题，只更改目标颜色，可把模型输出与输入变量建立清晰对应关系。它排除了真实照片中的背景复杂性，但也使任务显著简单，不宜当作通用视觉能力评估。</p>
+<h3>3.2 生成多模态张量</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/15-real-vlm/vlm_e2e.py"><code>vlm_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">processor = AutoProcessor.from_pretrained(MODEL_ID,
+    size={"longest_edge": 512})
+messages = [{"role":"user", "content":[
+    {"type":"image"}, {"type":"text", "text":QUESTION}]}]
+prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
+inputs = processor(text=prompt, images=[im.convert("RGB")],
+                   return_tensors="pt")
+assert inputs["pixel_values"].numel() &gt; 0
+</code></pre>
+<p><code>&lt;image&gt;</code> 位置由模板管理，像素经过 Processor 的视觉预处理变成 <code>pixel_values</code>。存在非空像素张量是本例的必要验收条件，避免无图输入仍生成颜色词。模板和图像占位符的细节依模型而异，迁移到其他 VLM 时要优先替换模型对应的 Processor 与聊天模板。</p>
+<h3>3.3 解码答案与后验检查</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/15-real-vlm/vlm_e2e.py"><code>vlm_e2e.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">generated_ids = model.generate(**inputs, max_new_tokens=36,
+    do_sample=False, pad_token_id=processor.tokenizer.eos_token_id)
+new_ids = generated_ids[0][inputs["input_ids"].shape[-1]:]
+answer = processor.decode(new_ids, skip_special_tokens=True).strip()
+</code></pre>
+<p>裁剪已有 <code>input_ids</code> 的长度，只保留模型新增的输出 token；若直接解码完整序列，可能把问题文本误计为回答。<code>do_sample=False</code> 适合确定性样例。<code>check_answer()</code> 用正则只检测 <code>red/blue</code> 词，并要求输出的颜色集合恰好与期望一致；更复杂问答不能仅用关键词作通用质量指标。</p>
+<h2>4. 运行与真实结果</h2>
+<p>归档 JSON 状态 <code>REAL_VLM_IMAGE_QA_DEMO_PASS</code>。模型 <code>HuggingFaceTB/SmolVLM-256M-Instruct</code> 在同一个问题下，对红色图输出 <code>Red</code>、蓝色图输出 <code>Blue</code>，对应词检查均为 <code>correct=true</code>。检查发生在真实 CPU 推理后，两个输入的 PNG 哈希不同。本批原始图像已归档，仅作为内部样章素材。</p>
+<table>
+<thead>
+<tr>
+<th>证据字段</th>
+<th>归档值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>REAL_VLM_IMAGE_QA_DEMO_PASS</td>
+</tr>
+<tr>
+<td><code>resolved_commit</code></td>
+<td>7e3e67edbbed1bf9888184d9df282b700a323964</td>
+</tr>
+<tr>
+<td><code>case_01 output</code></td>
+<td>Red</td>
+</tr>
+<tr>
+<td><code>case_02 output</code></td>
+<td>Blue</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测素材或源码示意（仅在线审读；见各图标注）</strong>：</p>
+<p><img alt="实验原图：红色方块（合成样本）" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAHNklEQVR4nO3XQQ3DAAwEwaYqhEAIf0SBEA4uDEfaGQLn38rHzHwA6PluHwDADgEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgKjf1vBzXVvTAK9y3vfKrg8AIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAg6piZ7RsAWOADAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCI+gNspwz7XK0+UAAAAABJRU5ErkJggg=="/>
+<em>实验原图：红色方块（合成样本）</em></p>
+<p><img alt="实验原图：蓝色方块（合成样本）" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAHOElEQVR4nO3XUQ0CAQwFQY4g4SSgBOGnBAnnocgoyc4YeP3b9JiZBwA9z+0DANghAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQ9doafn/urWmAv/K9zpVdHwBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAEDUMTPbNwCwwAcAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABD1AwSWDPsxRnW0AAAAAElFTkSuQmCC"/>
+<em>实验原图：蓝色方块（合成样本）</em></p>
+<h2>5. 使用与工程集成</h2>
+<p><strong>复现命令（需私有仓库访问权限）</strong></p>
+<pre><code class="language-bash">cd projects/15-real-vlm
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python vlm_e2e.py
-python verify_evidence.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">这是两个构造色块的受限测试，不代表复杂图像理解、真实业务图片、视觉推理、多轮问答或泛化准确率。模型 main 修订未锁定。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 15 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_evidence.py
+</code></pre>
+<p>实际接入图片理解服务时，按图片大小限制和模型视觉 Token 预算处理用户上传，维护问题文本、图片文件指纹、模型修订号和响应。可以把输出接到检索、分类或人工审核流程，但应额外测试多对象、文字 OCR、遮挡、颜色歧义和模型幻觉。若从教学样例升级到业务决策，至少引入真实任务数据集和人工审核基准。</p>
+<h2>6. 验证边界及来源</h2>
+<p>两个高对比度色块样本、同一个英文提问，未验证复杂图片理解或真实 VQA 正确率。模型修订原请求使用移动 <code>main</code>，尽管运行证据记有 resolved commit，公开复现时仍应固定提交。</p>
+<p><strong>证据出处</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39356642564">Actions Run</a> · <code>evidence/demo15_vlm_evidence.json</code></p>
+<p><strong>发布约束</strong>：私有研究材料不自动转为公开可复现；实测附件和第三方素材需在发布前核对许可、隐私及可访问性。</p>
+</main><footer>公开在线审读 · 内容未人工验收 · 不等同于生产验收</footer></body></html>

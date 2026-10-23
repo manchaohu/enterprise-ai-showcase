@@ -1,3 +1,93 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 01 · Official MCP ticket tools: from discovery to persistent action</title><meta name="description" content="A ticket assistant is useful only if it can execute operations, not merely describe them. This experiment demonstrates official MCP client/server discovery, typ"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><a href="../../demo01/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 01 · TECHNICAL FIELD GUIDE</div><h1>Official MCP ticket tools: from discovery to persistent action</h1><p class="lead">A ticket assistant is useful only if it can execute operations, not merely describe them. This experiment demonstrates official MCP client/server discovery, typed tool calls and persisted SQLite ticket updates rather than a fabricated tool transcript.</p><p><a href="../index.html">← All 27 demos</a></p></header><section><h2>01 · The problem this technology solves</h2><p>A ticket assistant is useful only if it can execute operations, not merely describe them. This experiment demonstrates official MCP client/server discovery, typed tool calls and persisted SQLite ticket updates rather than a fabricated tool transcript.</p></section><section><h2>02 · Core mechanism</h2><p>The official Python MCP SDK connects a stdio client to a separate server process. After session initialization, the client lists three tools and invokes them with structured arguments. TicketStore persists state in SQLite; repeated calls with the same request key are checked for idempotency.</p><div class="flow" aria-label="Pipeline overview"><div class="step"><b>01</b>Start stdio session</div><div class="step"><b>02</b>Discover tools/list</div><div class="step"><b>03</b>Invoke tools/call</div><div class="step"><b>04</b>Read back SQLite</div></div><p class="small">The flow diagram summarizes the implemented steps; it is not a measured model-output visualization.</p></section><section><h2>03 · What the experiment actually ran</h2><p>The test starts a real stdio MCP server with an isolated temporary SQLite database. It creates a 'Cannot log in' ticket, repeats the same request key, reads and closes the record, retries the close, and independently checks that only one ticket remains. No LLM chooses these calls in this demo.</p></section><section><h2>04 · Observed acceptance evidence</h2><p>The accepted GitHub Actions E2E demonstrates real MCP SDK discovery, invocation and durable ticket state with status OFFICIAL_MCP_STDIO_PASS. Older import notes describing unverified SDK transport refer to the initial archive stage, not this later independently implemented example.</p><div class="proof"><strong>Accepted within the stated scope</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755" target="_blank" rel="noopener noreferrer">GitHub Actions #39203341755</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/01-mcp-ticket" target="_blank" rel="noopener noreferrer">Source (private repo; permission may be required)</a></div></section><section><h2>05 · Reproduce the experiment</h2><p>From the repository root, use the experiment's documented runner. This snippet is a reference command, not a live in-browser executable.</p><pre><code>cd projects/01-mcp-ticket
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 01 · MCP ticket server: stdio transport, discovery and persistence</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../../index.html">Tutorial catalog</a><strong>English</strong><a href="../../demo01/index.html" lang="zh-CN">中文</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 01</div></header><main><h1>Demo 01｜MCP ticket server: stdio transport, discovery and persistence</h1><p class="repository-access-notice">Source access: the engineering source repository is private and its GitHub links may be inaccessible to public readers. Code excerpts and scope-bounded experimental evidence are reproduced on this page; the complete project is not public.</p>
+<blockquote>
+<p>Public review draft · source-backed · original Demo E2E passed within scope; article not yet human-accepted</p>
+</blockquote>
+<p><strong>Source code (private)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/01-mcp-ticket">01-mcp-ticket</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755">39203341755</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Expose create, read and close operations through an MCP server. An MCP client must discover the tools, call them over stdio and verify persistent changes in SQLite. Two creates using <code>request_key=case-001</code> must produce one ticket; read and close must work.</p>
+<h2>2. Architecture and execution path</h2>
+<p>The client launches a FastMCP server over stdio. Server handlers dispatch calls to <code>TicketStore</code>, which writes to SQLite. The test establishes <code>ClientSession</code>, lists tools and invokes them. No LLM selects tools here; that is the separate Demo 14 concern.</p>
+<h2>3. Core implementation</h2>
+<h3>3.1 Declare MCP tools</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/server.py"><code>server.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">mcp = FastMCP("enterprise-ticket")
+@mcp.tool()
+def create_ticket(request_key: str, title: str) -&gt; dict:
+    return store.create(request_key, title)
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
+</code></pre>
+<p><code>@mcp.tool()</code> exposes a typed Python function as an MCP tool. <code>TicketStore</code> is the persistence boundary. stdio carries protocol messages, so arbitrary stdout logging can corrupt the transport. This server has no network authentication or HTTP gateway.</p>
+<h3>3.2 Client initialization and result handling</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/verify_mcp.py"><code>verify_mcp.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">params = StdioServerParameters(
+    command=sys.executable, args=[str(ROOT / "server.py")], env=env)
+async with stdio_client(params) as (reader, writer):
+    async with ClientSession(reader, writer) as session:
+        await session.initialize()
+        tools = await session.list_tools()
+        first = payload(await session.call_tool("create_ticket", {
+            "request_key":"case-001", "title":"Cannot log in"}))
+</code></pre>
+<p><code>StdioServerParameters</code> starts a child process with a temporary database path. The <code>payload()</code> helper checks MCP error flags, prefers <code>structuredContent</code> and falls back to JSON text blocks. Calling via <code>ClientSession</code> makes the transport itself part of the test.</p>
+<h3>3.3 SQLite uniqueness and idempotent retries</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/ticket_store.py"><code>ticket_store.py</code></a> · Selected excerpt; full logic in repository</p>
+<pre><code class="language-python">db.execute("INSERT OR IGNORE INTO tickets(request_key,title) VALUES (?,?)",
+           (request_key, title))
+row = db.execute("SELECT * FROM tickets WHERE request_key = ?",
+                 (request_key,)).fetchone()
+if row["title"] != title:
+    raise ValueError("idempotency key reused with different title")
+</code></pre>
+<p><code>request_key</code> has a SQLite UNIQUE constraint. A retry with the same title returns the existing row; a conflicting title raises an error. Bound <code>?</code> parameters separate SQL from values. This is local business idempotency, not a distributed transaction guarantee.</p>
+<h2>4. Execution and observed results</h2>
+<p>The archived evidence reports <code>OFFICIAL_MCP_STDIO_PASS</code>, three discovered tools, ticket ID <code>1</code>, <code>idempotent=true</code>, <code>closed=true</code>, and one persisted SQLite row.</p>
+<table>
+<thead>
+<tr>
+<th>Evidence field</th>
+<th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>OFFICIAL_MCP_STDIO_PASS</td>
+</tr>
+<tr>
+<td><code>discovered_tools</code></td>
+<td>close_ticket, create_ticket, get_ticket</td>
+</tr>
+<tr>
+<td><code>ticket_id</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>sqlite_count</code></td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Evidence visuals or code-derived schematics (internal review; labeled per item):</strong></p>
+<p><img alt="Architecture derived from source (schematic)" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjIxMCIgdmlld0JveD0iMCAwIDEwMDAgMjEwIj48ZGVmcz48bWFya2VyIGlkPSJhcnJvdyIgdmlld0JveD0iMCAwIDEwIDEwIiByZWZYPSI5IiByZWZZPSI1IiBtYXJrZXJXaWR0aD0iNiIgbWFya2VySGVpZ2h0PSI2IiBvcmllbnQ9ImF1dG8tc3RhcnQtcmV2ZXJzZSI+PHBhdGggZD0iTSAwIDAgTCAxMCA1IEwgMCAxMCBaIiBmaWxsPSIjNTk4OGFjIi8+PC9tYXJrZXI+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjIxMCIgcng9IjE4IiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iNDUiIHk9IjQyIiBmb250LXNpemU9IjE5IiBmaWxsPSIjMjUzZDU0Ij5NQ1Ag57uE5Lu26ZO+6LevIC8g5L6d5o2u5bel56iL5Luj56CB57uY5Yi277yI6Z2e6L+Q6KGM5oiq5Zu+77yJPC90ZXh0PjxyZWN0IHg9IjQ1LjAiIHk9Ijc1IiB3aWR0aD0iMTk2LjAiIGhlaWdodD0iOTIiIHJ4PSIxMiIgZmlsbD0iI2YwZjZmYiIgc3Ryb2tlPSIjOGFhZmM5IiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIxNDMuMCIgeT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFiNGM3MiI+Q2xpZW50PC90ZXh0Pjx0ZXh0IHg9IjE0My4wIiB5PSIxMzgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiM1MDZmODYiPkNsaWVudFNlc3Npb248L3RleHQ+PHBhdGggZD0iTSAyNDguMCAxMjEgaCAyOSIgc3Ryb2tlPSIjNTk4OGFjIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIG1hcmtlci1lbmQ9InVybCgjYXJyb3cpIi8+PHJlY3QgeD0iMjgzLjAiIHk9Ijc1IiB3aWR0aD0iMTk2LjAiIGhlaWdodD0iOTIiIHJ4PSIxMiIgZmlsbD0iI2YwZjZmYiIgc3Ryb2tlPSIjOGFhZmM5IiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzODEuMCIgeT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFiNGM3MiI+c3RkaW88L3RleHQ+PHRleHQgeD0iMzgxLjAiIHk9IjEzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzUwNmY4NiI+TUNQIEpTT04tUlBDPC90ZXh0PjxwYXRoIGQ9Ik0gNDg2LjAgMTIxIGggMjkiIHN0cm9rZT0iIzU5ODhhYyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxyZWN0IHg9IjUyMS4wIiB5PSI3NSIgd2lkdGg9IjE5Ni4wIiBoZWlnaHQ9IjkyIiByeD0iMTIiIGZpbGw9IiNmMGY2ZmIiIHN0cm9rZT0iIzhhYWZjOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjE5LjAiIHk9IjExMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNyIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxYjRjNzIiPkZhc3RNQ1A8L3RleHQ+PHRleHQgeD0iNjE5LjAiIHk9IjEzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzUwNmY4NiI+c2VydmVyLnB5PC90ZXh0PjxwYXRoIGQ9Ik0gNzI0LjAgMTIxIGggMjkiIHN0cm9rZT0iIzU5ODhhYyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxyZWN0IHg9Ijc1OS4wIiB5PSI3NSIgd2lkdGg9IjE5Ni4wIiBoZWlnaHQ9IjkyIiByeD0iMTIiIGZpbGw9IiNmMGY2ZmIiIHN0cm9rZT0iIzhhYWZjOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iODU3LjAiIHk9IjExMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNyIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxYjRjNzIiPlNRTGl0ZTwvdGV4dD48dGV4dCB4PSI4NTcuMCIgeT0iMTM4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjEzIiBmaWxsPSIjNTA2Zjg2Ij5UaWNrZXRTdG9yZTwvdGV4dD48L3N2Zz4="/>
+<em>Architecture derived from source (schematic)</em></p>
+<h2>5. Integration and operational design</h2>
+<p><strong>Reproduction commands (requires private repo access)</strong></p>
+<pre><code class="language-bash">cd projects/01-mcp-ticket
 python -m pip install -r requirements.txt
-python verify_mcp.py</code></pre><p class="small">Model downloads, external tools, OS-specific requirements and permissions are described in the private project. </p></section><section><h2>06 · Limits and the next deeper question</h2><p class="note">There is no authenticated authorization, multi-tenant isolation, network MCP deployment, concurrent recovery testing or approval workflow. Unlike Demo 14, a pretrained model does not autonomously propose the tool calls.</p><p>This is an evidence-linked technical orientation page, not yet a full illustrated lesson. The six existing detailed tutorials retain their deeper analyses; future iterations will enrich the remaining demos with verified charts, examples and diagrams.</p></section><footer>Demo 01 · Bilingual field guide, source-linked and scope-bounded · <a href="../index.html">Back to catalogue</a></footer></main></body></html>
+python verify_mcp.py
+</code></pre>
+<p>Replace <code>TicketStore</code> with a business-service adapter while keeping stable idempotency keys and response shapes. Network deployments need authentication, authorization, audit and rate limiting. Model-driven tool selection can be added upstream, with independent application validation.</p>
+<h2>6. Limits and evidence</h2>
+<p>Only local stdio, three tools, SQLite state transitions and retries were exercised. Remote transport, authorization, real approvals, concurrency and distributed transactions remain outside scope.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755">Actions Run</a> · <code>evidence/demo01_mcp_e2e_result.json</code></p>
+<p><strong>Publication restriction:</strong> Private source and third-party evidence are not automatically cleared for public redistribution or replication.</p>
+</main><footer>Public review draft · Not publicly released · Not production validated</footer></body></html>

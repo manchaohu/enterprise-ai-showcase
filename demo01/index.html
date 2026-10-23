@@ -1,3 +1,93 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 01 · MCP 工单工具：AI 如何调用真正的企业操作？</title><meta name="description" content="当 AI 助手需要创建、查看或关闭工单时，不能把回答一段文字当成实际业务操作。本实验关注模型上下游的工具通信机制：客户端怎样发现服务端提供的能力，怎样传递参数，并确保 SQLite 中的工单状态真实改变。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo01/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 01 · 技术导读首版</div><h1>MCP 工单工具：AI 如何调用真正的企业操作？</h1><p class="lead">当 AI 助手需要创建、查看或关闭工单时，不能把回答一段文字当成实际业务操作。本实验关注模型上下游的工具通信机制：客户端怎样发现服务端提供的能力，怎样传递参数，并确保 SQLite 中的工单状态真实改变。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>当 AI 助手需要创建、查看或关闭工单时，不能把回答一段文字当成实际业务操作。本实验关注模型上下游的工具通信机制：客户端怎样发现服务端提供的能力，怎样传递参数，并确保 SQLite 中的工单状态真实改变。</p></section><section><h2>02｜核心技术与实现机制</h2><p>使用官方 Python MCP SDK 建立 stdio 客户端与服务端会话。客户端完成 initialize 后执行 list_tools，发现 create_ticket、get_ticket 和 close_ticket，再通过 call_tool 发送 JSON 参数。工单写入独立 SQLite 存储，通过请求键保持创建幂等。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>stdio 连接服务</div><div class="step"><b>02</b>tools/list 发现能力</div><div class="step"><b>03</b>tools/call 创建与关闭</div><div class="step"><b>04</b>SQLite 直接回读</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>脚本创建临时数据库，提出一次 Cannot log in 工单创建请求，然后以同一请求键重试、读取工单状态、关闭工单，再重复关闭并直接读取 SQLite。验收要求最终只有一条持久化工单、状态为 closed。该脚本测试真实 MCP 协议而不需要模型自动规划工具。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>实际专项 Actions 已完成官方 SDK 工具发现、调用和工单持久化验收，结果标识 OFFICIAL_MCP_STDIO_PASS。与早期迁移档案中的“SDK 尚未验证”不同，本次结果对应后来重新实现并在云端执行的正式工单样例。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755" target="_blank" rel="noopener noreferrer">GitHub Actions #39203341755</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/01-mcp-ticket" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>cd projects/01-mcp-ticket
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Demo 01 · MCP 工单工具服务：stdio 协议、工具发现与 SQLite 持久化</title><style>
+:root{font:16px/1.85 system-ui,-apple-system,Segoe UI,'Microsoft YaHei',sans-serif;color:#233448;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1050px;margin:auto;padding:0 24px}header{padding-top:35px;padding-bottom:20px}main{padding-bottom:75px}.meta{color:#47728e;font-size:.82rem;font-weight:700;letter-spacing:.08em}h1{font-size:clamp(1.7rem,3.7vw,2.65rem);line-height:1.35;margin:13px 0 18px}h2{font-size:1.5rem;margin:30px 0 15px;padding-top:10px;border-top:1px solid #e0e8f0}h3{font-size:1.14rem;margin:20px 0 8px;color:#1e4a6e}p{margin:12px 0 18px}strong{color:#19334b}main{background:white;border:1px solid #e4ebf1;border-radius:14px;padding:18px 42px 70px}pre{font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#14283d;color:#f1f7fc;padding:18px;border-radius:10px;white-space:pre;overflow-x:auto}code{font:0.9em ui-monospace,Consolas,monospace;background:#ebf1f5;border-radius:3px;padding:2px 4px}pre code{background:transparent;padding:0;font-size:1em}table{border-collapse:collapse;width:100%;font-size:.9rem;margin:16px 0}td,th{border:1px solid #dce6ed;padding:9px 12px;text-align:left}th{background:#edf3f8}figure{margin:18px 0;border:1px solid #dde7ef;border-radius:10px;padding:16px;background:#fcfeff}figure img{max-width:100%;height:auto;max-height:560px;object-fit:contain;display:block;margin:auto}figcaption{font-size:.82rem;color:#64798c;margin-top:10px;text-align:center}.note{background:#f1f5f8;border-left:3px solid #5185ab;padding:12px 16px;border-radius:4px;font-size:.88rem}.langbar{display:flex;gap:15px;align-items:center;justify-content:flex-end;margin-bottom:18px;font-size:.95rem}a{color:#12639f;text-decoration-color:#95bcdb;text-underline-offset:3px}a:focus-visible{outline:3px solid #2787bc}.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{border:1px solid #d6e5ef;background:#ecf4f9;border-radius:20px;padding:4px 10px;font-size:.79rem;color:#365c77}.linklist{font-size:.9rem}footer{padding:22px 24px 50px;color:#68798a;font-size:.85rem}@media(max-width:700px){header{padding:20px 17px 12px}main{padding:10px 19px 44px;border-radius:0}h2{font-size:1.27rem}pre{font-size:12px;padding:12px}td,th{padding:7px}.langbar{justify-content:flex-start}}
+</style><style>
+  .repository-access-notice,.source-note{font-size:.9rem;line-height:1.65;padding:12px 15px;background:#fff7e8;border-left:3px solid #b77e39;color:#584328;border-radius:5px}
+  img{max-width:100%;height:auto} .langbar{display:flex;gap:16px;flex-wrap:wrap}
+  @media(max-width:650px){body{overflow-x:hidden}pre{max-width:100%;overflow-x:auto}table{display:block;max-width:100%;overflow-x:auto}}
+  </style></head><body><header><nav class="langbar"><a href="../index.html">教程目录</a><strong>中文</strong><a href="../en/demo01/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · PUBLIC REVIEW CANDIDATE · DEMO 01</div></header><main><h1>Demo 01｜MCP 工单工具服务：stdio 协议、工具发现与 SQLite 持久化</h1><p class="repository-access-notice">发布提示：技术源码仓库为私有仓库，公开读者可能无法打开源码链接；本页提供经节选的实现代码与实验记录，不包含可直接下载的完整工程。</p>
+<blockquote>
+<p>在线审读候选（未通过逐篇人工验收） · 基于真实工程源码和证据 · 原始技术 Demo 的限定范围 PASS，不代表文章人工验收</p>
+</blockquote>
+<p><strong>工程源码（私有）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/01-mcp-ticket">01-mcp-ticket</a>  ·  <strong>Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755">39203341755</a></p>
+<h2>1. 技术需求与验收条件</h2>
+<p>通过 MCP SDK 建立独立工具服务。Client 需要发现 <code>create_ticket</code>、<code>get_ticket</code>、<code>close_ticket</code>，通过标准协议调用服务，并把执行结果写入 SQLite。测试使用同一个 <code>request_key=case-001</code> 重复创建，验收要求数据库只有一条记录，工单能查询和关闭。</p>
+<h2>2. 技术方案与执行链</h2>
+<p>运行进程分为 MCP Client 与以 stdio 启动的 FastMCP Server。Server 将工具调用映射到 <code>TicketStore</code>；SQLite 保证事务化保存。测试通过 <code>ClientSession.initialize()</code> 建立会话，再执行 <code>list_tools()</code> 与 <code>call_tool()</code>。该 Demo 直接验证 MCP 协议，不需要 LLM；Demo 14 才由真实模型生成工具调用提议，两者的职责不同。</p>
+<h2>3. 核心实现与代码要点</h2>
+<h3>3.1 声明 MCP 工具</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/server.py"><code>server.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">mcp = FastMCP("enterprise-ticket")
+@mcp.tool()
+def create_ticket(request_key: str, title: str) -&gt; dict:
+    return store.create(request_key, title)
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
+</code></pre>
+<p><code>@mcp.tool()</code> 把 Python 函数暴露成可发现工具。类型注解及函数文档用于向 Client 描述参数与用途，实际工单数据由 <code>TicketStore</code> 完成存取。stdio 以标准输入/输出承载协议，服务进程不能把调试文字直接打印到 stdout，否则可能破坏协议消息。该实现没有远程鉴权或 HTTP 网关。</p>
+<h3>3.2 客户端初始化与结果兼容处理</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/verify_mcp.py"><code>verify_mcp.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">params = StdioServerParameters(
+    command=sys.executable, args=[str(ROOT / "server.py")], env=env)
+async with stdio_client(params) as (reader, writer):
+    async with ClientSession(reader, writer) as session:
+        await session.initialize()
+        tools = await session.list_tools()
+        first = payload(await session.call_tool("create_ticket", {
+            "request_key":"case-001", "title":"Cannot log in"}))
+</code></pre>
+<p><code>StdioServerParameters</code> 指定启动可执行程序、脚本路径和 <code>TICKET_DB</code> 环境变量，测试为每次运行分配独立临时数据库。<code>payload()</code> 优先读取 <code>structuredContent</code>，必要时解析文本块中的 JSON，同时检查 <code>isError</code>，以适配 SDK 的响应包装差异。Client 不直接调用 <code>store.create()</code>，因此协议消息往返本身进入验收范围。</p>
+<h3>3.3 数据库唯一键与幂等重试</h3>
+<p><strong>源码位置</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/ticket_store.py"><code>ticket_store.py</code></a> · 关键片段（其余逻辑见完整源码）</p>
+<pre><code class="language-python">db.execute("INSERT OR IGNORE INTO tickets(request_key,title) VALUES (?,?)",
+           (request_key, title))
+row = db.execute("SELECT * FROM tickets WHERE request_key = ?",
+                 (request_key,)).fetchone()
+if row["title"] != title:
+    raise ValueError("idempotency key reused with different title")
+</code></pre>
+<p>数据库对 <code>request_key</code> 设置 <code>UNIQUE</code>。同一键同一标题的重试会返回已有记录；同一键对应不同标题会失败，避免错误地吞掉不同业务请求。<code>?</code> 参数绑定避免通过 SQL 字符串拼接注入值。这个机制保证单键业务幂等，不等于分布式跨系统事务。</p>
+<h2>4. 运行与真实结果</h2>
+<p>归档 JSON 记录 <code>OFFICIAL_MCP_STDIO_PASS</code>，发现三种工具，工单 ID 为 <code>1</code>，<code>idempotent=true</code>、<code>closed=true</code>，SQLite 记录数为 <code>1</code>。这与 Client 经 MCP 进行创建、重试、读取和关闭的断言一致。</p>
+<table>
+<thead>
+<tr>
+<th>证据字段</th>
+<th>归档值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>OFFICIAL_MCP_STDIO_PASS</td>
+</tr>
+<tr>
+<td><code>discovered_tools</code></td>
+<td>close_ticket, create_ticket, get_ticket</td>
+</tr>
+<tr>
+<td><code>ticket_id</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>sqlite_count</code></td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测素材或源码示意（仅在线审读；见各图标注）</strong>：</p>
+<p><img alt="依据源码绘制的工具调用组件关系（示意，非运行输出）" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjIxMCIgdmlld0JveD0iMCAwIDEwMDAgMjEwIj48ZGVmcz48bWFya2VyIGlkPSJhcnJvdyIgdmlld0JveD0iMCAwIDEwIDEwIiByZWZYPSI5IiByZWZZPSI1IiBtYXJrZXJXaWR0aD0iNiIgbWFya2VySGVpZ2h0PSI2IiBvcmllbnQ9ImF1dG8tc3RhcnQtcmV2ZXJzZSI+PHBhdGggZD0iTSAwIDAgTCAxMCA1IEwgMCAxMCBaIiBmaWxsPSIjNTk4OGFjIi8+PC9tYXJrZXI+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjIxMCIgcng9IjE4IiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iNDUiIHk9IjQyIiBmb250LXNpemU9IjE5IiBmaWxsPSIjMjUzZDU0Ij5NQ1Ag57uE5Lu26ZO+6LevIC8g5L6d5o2u5bel56iL5Luj56CB57uY5Yi277yI6Z2e6L+Q6KGM5oiq5Zu+77yJPC90ZXh0PjxyZWN0IHg9IjQ1LjAiIHk9Ijc1IiB3aWR0aD0iMTk2LjAiIGhlaWdodD0iOTIiIHJ4PSIxMiIgZmlsbD0iI2YwZjZmYiIgc3Ryb2tlPSIjOGFhZmM5IiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIxNDMuMCIgeT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFiNGM3MiI+Q2xpZW50PC90ZXh0Pjx0ZXh0IHg9IjE0My4wIiB5PSIxMzgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTMiIGZpbGw9IiM1MDZmODYiPkNsaWVudFNlc3Npb248L3RleHQ+PHBhdGggZD0iTSAyNDguMCAxMjEgaCAyOSIgc3Ryb2tlPSIjNTk4OGFjIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIG1hcmtlci1lbmQ9InVybCgjYXJyb3cpIi8+PHJlY3QgeD0iMjgzLjAiIHk9Ijc1IiB3aWR0aD0iMTk2LjAiIGhlaWdodD0iOTIiIHJ4PSIxMiIgZmlsbD0iI2YwZjZmYiIgc3Ryb2tlPSIjOGFhZmM5IiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSIzODEuMCIgeT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFiNGM3MiI+c3RkaW88L3RleHQ+PHRleHQgeD0iMzgxLjAiIHk9IjEzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzUwNmY4NiI+TUNQIEpTT04tUlBDPC90ZXh0PjxwYXRoIGQ9Ik0gNDg2LjAgMTIxIGggMjkiIHN0cm9rZT0iIzU5ODhhYyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxyZWN0IHg9IjUyMS4wIiB5PSI3NSIgd2lkdGg9IjE5Ni4wIiBoZWlnaHQ9IjkyIiByeD0iMTIiIGZpbGw9IiNmMGY2ZmIiIHN0cm9rZT0iIzhhYWZjOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNjE5LjAiIHk9IjExMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNyIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxYjRjNzIiPkZhc3RNQ1A8L3RleHQ+PHRleHQgeD0iNjE5LjAiIHk9IjEzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzUwNmY4NiI+c2VydmVyLnB5PC90ZXh0PjxwYXRoIGQ9Ik0gNzI0LjAgMTIxIGggMjkiIHN0cm9rZT0iIzU5ODhhYyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBtYXJrZXItZW5kPSJ1cmwoI2Fycm93KSIvPjxyZWN0IHg9Ijc1OS4wIiB5PSI3NSIgd2lkdGg9IjE5Ni4wIiBoZWlnaHQ9IjkyIiByeD0iMTIiIGZpbGw9IiNmMGY2ZmIiIHN0cm9rZT0iIzhhYWZjOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iODU3LjAiIHk9IjExMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIxNyIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMxYjRjNzIiPlNRTGl0ZTwvdGV4dD48dGV4dCB4PSI4NTcuMCIgeT0iMTM4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjEzIiBmaWxsPSIjNTA2Zjg2Ij5UaWNrZXRTdG9yZTwvdGV4dD48L3N2Zz4="/>
+<em>依据源码绘制的工具调用组件关系（示意，非运行输出）</em></p>
+<h2>5. 使用与工程集成</h2>
+<p><strong>复现命令（需私有仓库访问权限）</strong></p>
+<pre><code class="language-bash">cd projects/01-mcp-ticket
 python -m pip install -r requirements.txt
-python verify_mcp.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">未验证真实身份授权、多租户隔离、跨主机网络 MCP、复杂重试与业务审批；这不是让预训练模型自行生成函数调用的 Demo 14，也不能证明生产工单系统安全。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 01 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_mcp.py
+</code></pre>
+<p>在企业系统中把 <code>TicketStore</code> 替换为真实工单服务适配器，同时保留明确的请求键与返回对象。若 MCP Server 部署为网络服务，需要增加身份认证、授权、审计和限流；这些不能依赖 MCP 工具装饰器自动提供。需要 LLM 自动选择工具时，可在 Client 前接模型层，并按 Demo 14 的模式重新进行参数与权限校验。</p>
+<h2>6. 验证边界及来源</h2>
+<p>仅验证本地 stdio、三类工具、SQLite 状态和重复请求。未验证远程传输、安全策略、真实审批、大量并发和跨系统事务。与 Demo 14 的 Qwen 模型工具生成属于两个不同实验，不应将二者的结果合并成已验证的完整 Agent 业务系统。</p>
+<p><strong>证据出处</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39203341755">Actions Run</a> · <code>evidence/demo01_mcp_e2e_result.json</code></p>
+<p><strong>发布约束</strong>：私有研究材料不自动转为公开可复现；实测附件和第三方素材需在发布前核对许可、隐私及可访问性。</p>
+</main><footer>公开在线审读 · 内容未人工验收 · 不等同于生产验收</footer></body></html>
