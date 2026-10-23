@@ -1,0 +1,76 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="CA-01 Coding Agent Agent Loop D2 源码级技术教程：架构、真实 mini-SWE-agent 代码、实际修复轨迹、失败对照与复现实验。"><title>CA-01 Agent Loop｜复杂 AI 系统技术研究</title><style>:root{font:16px/1.8 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#243449;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}a{color:#14649b}a:hover{text-decoration-thickness:2px}.mast{background:#142b43;color:#fff;padding:23px max(24px,calc((100vw - 1200px)/2))}.mast a{color:#c9e7fb;text-decoration:none}.mast strong{margin-left:15px}.layout{max-width:1200px;margin:0 auto;padding:36px 22px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:33px}nav.sidebar{position:sticky;top:20px;align-self:start;max-height:90vh;overflow:auto;border:1px solid #dce5ed;background:#fff;border-radius:13px;padding:18px}nav.sidebar b{display:block;margin-bottom:10px}nav.sidebar a{display:block;font-size:.84rem;line-height:1.55;margin:10px 0;text-decoration:none;color:#435c73}article{background:white;padding:36px 44px;border:1px solid #dbe5ee;border-radius:16px;min-width:0}h1{font-size:clamp(1.65rem,3vw,2.5rem);line-height:1.4;color:#173f62}h2{font-size:1.55rem;border-bottom:1px solid #dbe5ee;padding-bottom:8px;margin-top:46px;line-height:1.5}h3{font-size:1.15rem;margin-top:32px}p{margin:16px 0;color:#384c61}p,li{overflow-wrap:anywhere}aside{border-left:4px solid #2690bb;background:#edf7fb;padding:14px 19px;border-radius:0 8px 8px 0}.code{position:relative;background:#14263b;color:#e6f0fb;border-radius:10px;padding:40px 18px 18px;overflow:auto;font:13px/1.65 ui-monospace,Consolas,monospace;white-space:pre}.lang{position:absolute;top:8px;left:17px;font:11px system-ui;color:#9abed9;text-transform:uppercase}code{font:0.9em ui-monospace,Consolas,monospace;background:#edf3f9;padding:2px 4px;border-radius:4px}pre code{font:inherit;background:none;padding:0}.table-scroll{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.91rem;line-height:1.55}th,td{border-bottom:1px solid #dbe6ee;padding:11px;text-align:left;vertical-align:top}th{background:#f3f7fa}li{margin:7px 0}footer{border-top:1px solid #dae4ef;padding:22px 0;margin-top:40px;color:#6b7f91;font-size:.85rem}@media(max-width:900px){.layout{display:block;padding:15px}.sidebar{position:static!important;max-height:none!important;margin-bottom:18px}article{padding:24px 18px}}@media print{nav.sidebar,.mast{display:none}.layout{display:block}article{border:0}} </style></head><body><header class="mast"><a href="../../index.html">← 技术展示首页</a><strong>复杂 AI 系统案例研究 · Coding Agent 专题</strong></header><div class="layout"><nav class="sidebar" aria-label="章节目录"><b>本章目录</b><a href="#section-0">1. 真实问题：一句“修复 Bug”怎样变成可验证的代码更改</a><a href="#section-1">2. 真实系统架构与状态</a><a href="#section-2">3. 源码走读：每一轮的确切调用关系</a><a href="#section-3">4. 三个真实 Agent 修复任务的可观察轨迹</a><a href="#section-4">5. 可复现步骤（按成本和证据等级分层）</a><a href="#section-5">6. 结果验收：框架退出、任务提交、代码正确性分开记录</a><a href="#section-6">7. 技术取舍与边界</a><a href="#section-7">8. 本章 D2 验收清单与后续 D3 方向</a></nav><article><h1 id="section-0">JOB-001R｜CA-01 Agent Loop：源码、运行轨迹与工程边界（D2 教程候选 v0.1）</h1>
+<aside>状态：<strong>D2 技术教程候选，待人工审读；不新增真实模型实验</strong>。日期：2026-10-23。研究代码版本 mini-SWE-agent <strong>v2.4.6</strong>，模型接入 DeepSeek Flash / LiteLLM 1.105.1。当前仓库 CA-01 的真实技术证据按 JOB-001Q 为 D2，不代表本篇教程已通过 D2_TUTORIAL_PASS。</aside>
+<h2 id="section-0">1. 真实问题：一句“修复 Bug”怎样变成可验证的代码更改</h2>
+<p>用户要求修复 Python <code>average</code> 函数，其中 <code>//</code> 整除会丢失小数。对于 Coding Agent，这不是一次文本生成：Agent 首先需要读取代码和测试，选择命令取得可观察反馈，再决定修改范围、运行测试并提交结果。即使模型准确识别问题，如果容器挂载目录不允许写入，修复仍不能完成。CA-01 的成功轨迹与权限失败轨迹正好展示了这一点。</p>
+<p>本研究将“Agent Loop”限定为模型决策与外部工具结果之间的反复交互；不把它等同于智能规划、长期记忆或多 Agent 协作。</p>
+<h2 id="section-1">2. 真实系统架构与状态</h2>
+<p>使用的上游仓库为 <a href="https://github.com/SWE-agent/mini-swe-agent/tree/v2.4.6" target="_blank" rel="noopener">SWE-agent/mini-swe-agent ↗</a>，<strong>v2.4.6</strong> 对应上游 Git 树 <code>a83fcae82d2a08f0ee0c688f9d137b3566c097f8</code>（这是 tree SHA，不是 commit SHA）。源码链接均锁定该 tag：</p>
+<ul><li><a href="https://github.com/SWE-agent/mini-swe-agent/blob/v2.4.6/src/minisweagent/agents/default.py" target="_blank" rel="noopener"><code>src/minisweagent/agents/default.py</code> ↗</a>：<code>DefaultAgent.run/step/query/execute_actions/serialize/save</code>。</li><li><a href="https://github.com/SWE-agent/mini-swe-agent/blob/v2.4.6/src/minisweagent/environments/docker.py" target="_blank" rel="noopener"><code>src/minisweagent/environments/docker.py</code> ↗</a>：<code>DockerEnvironment._start_container/execute/_check_finished</code>。</li><li><a href="https://github.com/SWE-agent/mini-swe-agent/tree/v2.4.6/src/minisweagent/models" target="_blank" rel="noopener">模型适配层目录 ↗</a>：模型把消息变成响应及可执行 actions；特定响应格式由对应 model adapter 处理。此篇未逐一确认具体运行的 adapter 类路径，不能将任一 adapter 写成唯一实现。</li><li>本仓库 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/main/cases/CASE-001-mini-swe-agent/scripts/agent_run.py" target="_blank" rel="noopener"><code>scripts/agent_run.py</code> ↗</a> 及 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/main/cases/CASE-001-mini-swe-agent/scripts/job001h_run.py" target="_blank" rel="noopener"><code>scripts/job001h_run.py</code> ↗</a>：研究者侧的 fixture 准备、容器配置、CLI 调用与独立验收。</li></ul>
+<p>核心数据状态是 <code>self.messages</code>（system/user/assistant/观察/exit 消息序列）、<code>self.n_calls</code>（模型查询次数）、<code>self.cost</code>（框架提供的估算累计费用），以及环境实例。模型生成的动作由 <code>message[&quot;extra&quot;][&quot;actions&quot;]</code> 表示；每个 action 可包含命令。<strong>一次 query 可以携带多个 actions，所以“API 调用数”和“工具调用数”天然不同。</strong></p>
+<pre class="code"><span class="lang">mermaid</span><code>sequenceDiagram
+    participant User as Task / Prompt
+    participant Agent as DefaultAgent
+    participant Model as Model adapter
+    participant Env as DockerEnvironment
+    participant Test as Host independent test
+    User-&gt;&gt;Agent: run(task)
+    Agent-&gt;&gt;Agent: 初始化 messages
+    loop 直到 exit
+        Agent-&gt;&gt;Agent: 检查调用/费用/墙钟限额
+        Agent-&gt;&gt;Model: query(messages)
+        Model--&gt;&gt;Agent: assistant message + actions
+        Agent-&gt;&gt;Env: execute(action) [0..n]
+        Env--&gt;&gt;Agent: output / returncode 或 Submitted
+        Agent-&gt;&gt;Agent: format observations; append messages; save trajectory
+    end
+    Agent--&gt;&gt;User: exit_status / submission
+    User-&gt;&gt;Test: 独立运行原始回归测试
+    Test--&gt;&gt;User: PASS/FAIL + diff/verdict</code></pre>
+<h2 id="section-2">3. 源码走读：每一轮的确切调用关系</h2>
+<h3 id="section-3">3.1 run()：初始化、循环与终止</h3>
+<p><code>DefaultAgent.run(task)</code> 把任务写进模板变量，清空并初始化 <code>self.messages</code>，追加 system 与 user 消息；随后在 <code>while True</code> 中调用 <code>step()</code>。每一轮在 <code>finally</code> 中执行 <code>save(self.config.output_path)</code>，并在最后一条消息角色为 <code>exit</code> 时跳出。这个结构解释了为什么轨迹既包含连续的模型/环境反馈，也包含终止记录。</p>
+<p><code>run()</code> 分别处理 <code>FormatError</code>、<code>InterruptAgentFlow</code> 和其他异常。格式错误可能进入反复格式失败退出分支；<code>InterruptAgentFlow</code> 把携带的消息追加到记录；未捕获异常被记入轨迹后仍会抛出。<strong>并非所有结束都表示修复完成。</strong></p>
+<h3 id="section-3">3.2 step()/query()：限额和模型决策</h3>
+<p>上游 <code>step()</code> 的核心只有一行：</p>
+<pre class="code"><span class="lang">python</span><code>return self.execute_actions(self.query())</code></pre>
+<p><code>query()</code> 在发起模型调用<strong>之前</strong>检查 <code>step_limit</code>、<code>cost_limit</code> 和 <code>wall_time_limit_seconds</code>；限额满足退出条件时生成相应的 <code>LimitsExceeded</code> 或 <code>TimeExceeded</code>。通过检查后才增加 <code>n_calls</code>，调用 <code>model.query(self.messages)</code>，累加模型响应上的估算 <code>cost</code>，并把响应加到消息历史。这里的费用检查基于已累计费用，而不是提供商实时强制封顶：最后一次请求可能使累计估算超过阈值，下一轮才停止。</p>
+<h3 id="section-3">3.3 execute_actions()：消息动作与工具执行</h3>
+<p><code>execute_actions(message)</code> 遍历 <code>message.get(&quot;extra&quot;, {}).get(&quot;actions&quot;, [])</code>，把每个动作交给 <code>env.execute(action)</code>，随后用 <code>model.format_observation_messages(...)</code> 将执行结果转成模型可读的观察消息并追加到历史。因此一条模型消息不意味着恰好执行一个命令。若执行器抛出 <code>Submitted</code>，控制流被打断，由 <code>run()</code> 的中断分支保存 exit 消息；该提交动作不必产生常规的 observation。</p>
+<h3 id="section-3">3.4 DockerEnvironment：容器进程与命令执行</h3>
+<p><code>DockerEnvironment._start_container()</code> 启动一个保持存活的容器；<code>execute()</code> 用 <code>docker exec -w &lt;cwd&gt;</code> 将模型提出的命令交给容器内解释器执行，捕获合并后的 stdout/stderr、returncode 或执行异常，再调用 <code>_check_finished()</code>。注意默认解释器配置为 <code>[&quot;bash&quot;, &quot;-lc&quot;]</code>；实际镜像必须提供可用的 bash，否则需显式调整解释器。上游默认 Docker <code>run_args</code> 包含 <code>--rm</code>，研究脚本覆盖 run_args 时应自行确认资源回收行为与容器清理。</p>
+<p><code>_check_finished()</code> 只有在工具输出第一条有效行等于 <code>COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT</code>，且命令返回码为 0 时，才抛出 <code>Submitted</code> 并保存提交内容。这是<strong>框架协议上的完成标记</strong>，不是外部单测证明。相反，命令非零返回码通常以观察消息形式回送模型，让其有机会下一轮纠正。</p>
+<h3 id="section-3">3.5 serialize()/save()：证据怎样落盘</h3>
+<p><code>serialize()</code> 将 <code>info.model_stats.api_calls</code>、<code>info.model_stats.instance_cost</code>、<code>info.exit_status</code>、<code>messages</code>、<code>trajectory_format</code>、模型与环境信息写入结构化对象；<code>save()</code> 可把 JSON 写到指定路径。数值应读取轨迹而非估算“每轮大约一次工具调用”。输出的路径、模型消息、原始命令可能含敏感信息，分享前需脱敏。</p>
+<h2 id="section-3">4. 三个真实 Agent 修复任务的可观察轨迹</h2>
+<p>以下是<strong>既有历史实验</strong>，不是本次重新执行模型：</p>
+<p>| 任务 | 模型调用 | 工具调用 | 宿主独立验收 | 原始证据 |</p>
+<p>|---|---:|---:|---|---|</p>
+<p>| <code>average</code> 精度 L1 | 7 | 7（第 7 次为提交标记；常规工具反馈 6 条） | 3/3 PASS | <a href="https://github.com/manchaohu/complex-ai-systems-lab/actions/runs/39778338284" target="_blank" rel="noopener">Actions 39778338284 ↗</a> |</p>
+<p>| JSON 字段类型 L1 | 6 | 6 | 4/4 PASS | <a href="https://github.com/manchaohu/complex-ai-systems-lab/actions/runs/39780308075" target="_blank" rel="noopener">Actions 39780308075 ↗</a> |</p>
+<p>| duration 跨模块 L2 | 7 | 8（第 2 次模型响应有两个动作） | 5/5 PASS | <a href="https://github.com/manchaohu/complex-ai-systems-lab/actions/runs/39782306863" target="_blank" rel="noopener">Actions 39782306863 ↗</a> |</p>
+<p>详见 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/job001r-ca01-d2-tutorial/docs/JOB-001F-TRAJECTORY-COMPARISON.md" target="_blank" rel="noopener">JOB-001F 轨迹对照 ↗</a>，以及 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/job001r-ca01-d2-tutorial/docs/JOB-001C-AGENT-LOOP-ANALYSIS.md" target="_blank" rel="noopener">JOB-001C 最早成功/失败对照 ↗</a>。</p>
+<h3 id="section-4">4.1 L1 average：观察 → 修改 → 验证 → 提交</h3>
+<p>第一轮列出目录；第二轮读取 <code>calculator.py</code> 与 <code>test_calculator.py</code>，定位 <code>//</code>；第三轮运行测试并复现小数失败；第四轮修改除法；第五、六轮验证并清理临时脚本；第七轮提交。这是 <strong>model.query → action → environment output → message history → next query</strong> 的直接实例。成功轨迹的结论来自宿主再次执行三个原测试，而不是助手提交宣言。</p>
+<h3 id="section-4">4.2 L2：跨模块阅读不等于多文件编辑</h3>
+<p>duration 的真实运行需要跨 <code>config.py → validate.py → duration.py</code> 阅读，测试中 3 项失败、2 项成功；Agent 修正 <code>duration.py</code> 的秒/分钟换算后，独立五项测试通过。这支持“跨模块理解与单文件修改”而<strong>不支持</strong>“多文件改造已验证”。第二次模型响应含两个工具动作，正好对应 <code>execute_actions()</code> 的多动作执行模型。</p>
+<h3 id="section-4">4.3 失败对照：错误不一定发生在推理阶段</h3>
+<p>同一个 average 缺陷的早期失败轨迹 <a href="https://github.com/manchaohu/complex-ai-systems-lab/actions/runs/39777641877" target="_blank" rel="noopener">Actions 39777641877 ↗</a> 显示 Agent 已发现缺陷，但容器进程 UID 0、移除 capabilities，而被挂载的源码目录属于 UID 1001，导致写入权限不足。随后尝试多种修复环境办法仍失败，最后终止于 <code>LimitsExceeded</code>；框架进程退出码也可能为 0，但目标测试依旧 FAIL。后续对齐 UID/GID 1001 并增加容器写入检查，才使成功实验成立。这是<strong>执行器条件差异</strong>造成的观察性对照，不是“同等条件仅模型随机性造成的失败”。</p>
+<h2 id="section-4">5. 可复现步骤（按成本和证据等级分层）</h2>
+<h3 id="section-5">A. 无密钥：先复现任务故障（不证明 Agent 能修复）</h3>
+<pre class="code"><span class="lang">bash</span><code>git clone https://github.com/manchaohu/complex-ai-systems-lab.git
+cd complex-ai-systems-lab
+python cases/CASE-001-mini-swe-agent/scripts/agent_run.py --output job001b-output</code></pre>
+<p>脚本会复制故障 fixture，运行预期失败的原单测并写入 <code>baseline.txt</code> 与 <code>plan.json</code>，打印 <code>JOB-001B DRY_RUN_PASS; no model calls</code>。这个 PASS 只证明“故障样例、测试和配置准备就绪”。<strong>不要把它记成真实模型 Agent PASS。</strong></p>
+<h3 id="section-5">B. 无密钥：阅读真实源码和已有实验记录</h3>
+<p>先打开本篇第 2 节的上游版本源码；再打开 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/job001r-ca01-d2-tutorial/docs/JOB-001C-AGENT-LOOP-ANALYSIS.md" target="_blank" rel="noopener">JOB-001C ↗</a> 与 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/job001r-ca01-d2-tutorial/docs/JOB-001F-TRAJECTORY-COMPARISON.md" target="_blank" rel="noopener">JOB-001F ↗</a>。沿着每次 assistant 动作寻找工具观察，并核对 <code>exit_status</code> 与宿主测试结果。历史 Artifact 可能过期；若无法下载完整轨迹，只能按保留的审计摘要复核，<strong>不得宣称已经恢复了原始逐字轨迹</strong>。</p>
+<h3 id="section-5">C. 真实付费运行（手动明确授权，可能产生费用）</h3>
+<p>已有 Click 真实 issue 研究入口为 <a href="https://github.com/manchaohu/complex-ai-systems-lab/blob/main/.github/workflows/job001h-real-click-agent.yml" target="_blank" rel="noopener"><code>JOB-001H Real Click repair</code> ↗</a>，提供 GitHub Actions <code>workflow_dispatch</code> 的显式 <code>execute_paid</code> 开关。默认 false，运行真实上游 Click 固定版本的<strong>故障基线</strong>；true 才执行付费模型调用，前提是仓库 GitHub Secret 已正确配置。运行前需检查最新工作流与固定依赖、Docker 权限、写入预检，并在 Actions 中明确审核成本与风险。</p>
+<p><code>python .../job001h_run.py --output job001h-output</code> 可单独检查 Click baseline；<code>--execute</code> 有真实模型调用风险，<strong>本篇未触发</strong>。当前仓库未把历史 L2 付费运行做成一键重放；Click 入口也并非 L1/L2 的完全同题复现。</p>
+<h2 id="section-5">6. 结果验收：框架退出、任务提交、代码正确性分开记录</h2>
+<p>推荐至少记录 <code>baseline</code> 预期失败、<code>trajectory.info.exit_status</code>、<code>model_stats.api_calls</code>、实际 actions 数、受影响源码文件、<code>git diff</code>、最终独立测试和人为操作。尤其注意 <code>Submitted</code> 代表框架接收到提交协议；它不替代 diff 检查和测试 PASS。模型估算费用不是实际供应商账单。成功个案与失败个案都只有极少样本，不能计算通用 Coding Agent 修复成功率。</p>
+<h2 id="section-6">7. 技术取舍与边界</h2>
+<p><strong>最小 Loop 的优点</strong>是代码路径短、对模型与工具进行组合较容易、执行轨迹容易审计；<strong>边界</strong>是命令驱动工具暴露文件系统能力、环境故障可能触发多轮无效动作、单纯预算与步数上限不会自动形成细粒度工具审批、轨迹文件也不等于跨进程 checkpoint 恢复。容器 <code>--network none</code>、<code>--cap-drop ALL</code>、<code>no-new-privileges</code>、非 root、限定挂载等配置减少风险，但不能承诺“绝对安全”；运行受信任镜像，并避免将主机 Docker Socket 或主目录直接挂载给 Agent。</p>
+<p>迁移到其他 Coding Agent 时，可以复用“状态/行动/观察/终止/独立验收”分析模型；不宜照搬 mini 的 <code>message[&quot;extra&quot;][&quot;actions&quot;]</code> 格式或完成标记协议。对 Aider、OpenHands 需要单独定位其执行状态机、编辑接口与终止条件。</p>
+<h2 id="section-7">8. 本章 D2 验收清单与后续 D3 方向</h2>
+<ul><li>[x] 固定开源源码版本、明确文件/函数及消息/执行链。</li><li>[x] 保留真实任务轨迹的已审计摘要及可追溯运行链接。</li><li>[x] 记录成功与环境失败对照，区分提交与独立验收。</li><li>[x] 给出无密钥的具体基线命令和真实运行入口的授权边界。</li><li>[ ] 人工逐章审读技术准确性、可读性与代码适配。</li><li>[ ] 对当前修订 HEAD 运行静态链接/文档验收 CI；历史真实实验不重复计算。</li><li>[ ] 若要升 D3，在固定版本与任务下做受控干预实验（例如不同执行器写入权限、格式错误恢复或步数限制），保存完整脱敏轨迹，排除其他变量后分析机制差异。</li></ul>
+<p><strong>候选裁决：CA-01 的真实运行技术等级维持 D2；JOB-001R 教程文本为候选，等待审读和本次 PR 检查。</strong></p><footer>版本：JOB-001R v0.1 · 技术教程候选（尚待人工审读）。历史实验结果与新发布的教程文本分别验收。</footer></article></div></body></html>
