@@ -2,10 +2,61 @@
 :root{font:16px/1.78 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203449;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1010px;margin:auto;padding:32px 22px 88px}a{color:#126393}a:focus-visible{outline:3px solid #317eb4;outline-offset:3px}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.3;margin:12px 0}h2{font-size:1.48rem;line-height:1.4;margin:0 0 13px}h3{font-size:1.12rem;margin:0 0 6px}p{margin:10px 0 17px}.eyebrow{font-size:.86rem;color:#2a6c8a;font-weight:700;letter-spacing:.05em}.muted{color:#56697a}section{background:#fff;border:1px solid #dfe8f0;border-radius:17px;margin:22px 0;padding:27px}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.panel{background:#f6f9fc;border:1px solid #dce7ef;border-radius:12px;padding:17px}.metric{font-size:1.9rem;color:#14658b;font-weight:800;line-height:1.25}.small{font-size:.88rem;color:#596c7b}.svgwrap{border:1px solid #d8e4ef;border-radius:12px;background:#f9fcff;margin:17px 0;padding:12px;overflow:hidden}svg{width:100%;height:auto;display:block}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.step{background:#ebf4f8;border-radius:10px;padding:12px;text-align:center;font-size:.92rem}.note{border-left:4px solid #c18a3d;background:#fff9ee;padding:16px;border-radius:6px}ul{padding-left:23px}li{margin:7px 0}.links a{margin-right:15px;display:inline-block}footer{color:#657789;border-top:1px solid #dfe7ef;margin-top:30px;padding-top:20px;font-size:.88rem}@media(max-width:680px){section{padding:19px}.columns,.steps{grid-template-columns:1fr}main{padding:22px 15px 55px}}
  .language-bar{display:flex;justify-content:flex-end;gap:12px;margin:0 0 10px}.lang-active{font-weight:800;color:#1c435d}.evidence{background:#eaf7f4;border-left:4px solid #348c7e;padding:16px;border-radius:8px}.visual-block{border:1px solid #dce6ee;border-radius:12px;background:#f9fbff;padding:15px;margin:18px 0}.visual-block svg{display:block;width:100%;height:auto}@media(max-width:650px){.language-bar{justify-content:flex-start}}</style></head><body><main>
 <nav class="language-bar" aria-label="Language"><a href="../../demo23/index.html" lang="zh-CN">中文</a><span class="lang-active">English</span></nav>
-<header><div class="eyebrow">ENTERPRISE AI TECH LAB · DEMO 23 · ENGLISH READER EDITION</div><h1>How can AI locate speech activity in an audio recording?</h1><p class="sub">A real pretrained Silero VAD ONNX experiment: 844 neural probability frames, nine candidate speech spans, independent replay, and a chart derived from genuine outputs.</p><p><a href="../index.html">← Back to all tutorials</a></p></header>
+<header><div class="eyebrow">ENTERPRISE AI TECH LAB · DEMO 23 · ENGLISH READER EDITION</div><h1>Silero VAD ONNX | Speech probabilities and detected time spans</h1><p class="sub">A real pretrained Silero VAD ONNX experiment: 844 neural probability frames, nine candidate speech spans, independent replay, and a chart derived from genuine outputs.</p><p><a href="../index.html">← Back to all tutorials</a></p></header>
 <section><h2>01 | The problem: when should speech processing begin?</h2><p>A voice assistant or meeting recorder receives a stream that mixes speech, silence and background sounds. Sending every second to a speech-recognition model may consume unnecessary work; cutting too aggressively can lose useful utterances. The system needs a more basic clue: <strong>at what times is human speech likely present?</strong></p><p>Voice Activity Detection (VAD) estimates likely speech intervals. It does not tell us which words were spoken or identify the speaker. It often serves as an upstream signal for speech-to-text, audio chunking or real-time turn-taking.</p></section>
 <section><h2>02 | What a neural speech probability really means</h2><p>This experiment uses a real pretrained <strong>Silero VAD ONNX</strong> model. It takes 16 kHz mono audio in 512-sample frames, equivalent to <strong>32 milliseconds</strong> per frame. The runtime preserves a small audio context and recurrent neural state between frames; the model produces a probability from zero to one for each frame.</p><p><strong>The neural network supplies probabilities, while the application supplies the conversion from probabilities to time intervals.</strong> The demonstration applies a threshold of 0.50, merges gaps no longer than four frames, and requires a span at least six frames long. These are simplified teaching settings, not Silero's full official production segmentation procedure.</p></section>
-<section><h2>03 | The exact test signal and pipeline</h2><div class="steps"><div class="step"><strong>1. Source recording</strong><div>Original upstream WAV, 16 kHz</div></div><div class="step"><strong>2. Build fixture</strong><div>Two 12-second excerpts + 3 seconds inserted silence</div></div><div class="step"><strong>3. Infer</strong><div>Silero ONNX with recurrent state</div></div><div class="step"><strong>4. Postprocess</strong><div>Threshold and merge candidate spans</div></div></div><p>The 27-second fixture contains real excerpts from a public upstream test recording: the first 12 seconds and the last 12 seconds, separated and enclosed by three explicitly generated one-second silent gaps. Inserting silence is a controlled engineering fixture. It does not mean the recording represents the timing, noise level or complexity of natural multi-speaker conversations.</p><p>Every model probability and candidate span is written into machine-readable evidence; an independent script reloads the actual weights and audio and replays all frames.</p></section>
+<section><h2>03 | The exact test signal and pipeline</h2><div class="steps"><div class="step"><strong>1. Source recording</strong><div>Original upstream WAV, 16 kHz</div></div><div class="step"><strong>2. Build fixture</strong><div>Two 12-second excerpts + 3 seconds inserted silence</div></div><div class="step"><strong>3. Infer</strong><div>Silero ONNX with recurrent state</div></div><div class="step"><strong>4. Postprocess</strong><div>Threshold and merge candidate spans</div></div></div><p>The 27-second fixture contains real excerpts from a public upstream test recording: the first 12 seconds and the last 12 seconds, separated and enclosed by three explicitly generated one-second silent gaps. Inserting silence is a controlled engineering fixture. It does not mean the recording represents the timing, noise level or complexity of natural multi-speaker conversations.</p><p>Every model probability and candidate span is written into machine-readable evidence; an independent script reloads the actual weights and audio and replays all frames.</p></section><section data-engineering-review="v0.5" style="border:1px solid #c7d9e8;border-radius:12px;padding:22px;background:#fafcff"><h2>Engineering implementation | Stateful inference and postprocessing</h2><p><small>Executed source excerpts; full code is in the private repository: <code>projects/23-real-vad/vad_e2e.py</code></small></p><h3>Frame-wise ONNX inference with persistent state</h3><p>At 16 kHz, 512 samples represent 32 ms. The model receives 64 samples of retained context and a recurrent state tensor. The returned state is passed to the next frame; short final frames are padded. Input names, state dimensions, and probability bounds are checked.</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def model_scores(model: Path, signal: np.ndarray) -&gt; tuple[np.ndarray, dict]:
+    import onnxruntime as ort
+
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    options.inter_op_num_threads = 1
+    session = ort.InferenceSession(str(model), sess_options=options, providers=["CPUExecutionProvider"])
+    inputs = {x.name: x for x in session.get_inputs()}
+    if set(inputs) != {"input", "state", "sr"}:
+        raise AssertionError(f"wrong Silero ONNX inputs: {list(inputs)}")
+    state = np.zeros((2, 1, 128), dtype=np.float32)
+    context = np.zeros((1, CONTEXT), dtype=np.float32)
+    scores = []
+    tic = time.perf_counter()
+    for i in range(0, len(signal), FRAME):
+        chunk = np.asarray(signal[i:i + FRAME], dtype=np.float32)
+        if len(chunk) != FRAME:
+            chunk = np.pad(chunk, (0, FRAME - len(chunk)))
+        model_input = np.concatenate((context, chunk.reshape(1, FRAME)), axis=1)
+        outputs = session.run(None, {"input": model_input, "state": state, "sr": np.array(SR, dtype=np.int64)})
+        if len(outputs) != 2:
+            raise AssertionError("unexpected pretrained ONNX model output count")
+        score = float(np.asarray(outputs[0]).reshape(-1)[0])
+        state = np.asarray(outputs[1], dtype=np.float32)
+        if state.shape != (2, 1, 128) or not math.isfinite(score) or not 0 &lt;= score &lt;= 1:
+            raise AssertionError("invalid VAD state or probability")
+        scores.append(score)
+        context = model_input[:, -CONTEXT:].copy()</code></pre><h3>Thresholding, gap merging, and timestamps</h3><p>Frames above 0.50 form candidates; gaps of up to four frames are merged and intervals shorter than six frames are discarded. Frame boundaries become seconds using the sample rate. These demo rules are distinct from Silero's official hysteresis implementation.</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def segments_from_scores(scores: np.ndarray, sample_count: int) -&gt; list[dict]:
+    """Simple pedagogical threshold + short-gap merge; not Silero's official hysteresis."""
+    if sample_count &lt;= 0 or scores.ndim != 1 or len(scores) != math.ceil(sample_count / FRAME):
+        raise ValueError("invalid frames vs audio length")
+    if not np.isfinite(scores).all() or np.any(scores &lt; 0) or np.any(scores &gt; 1):
+        raise ValueError("invalid VAD score distribution")
+    high = np.flatnonzero(scores &gt;= THRESHOLD)
+    if len(high) == 0:
+        return []
+    groups = [[int(high[0]), int(high[0])]]
+    for frame in high[1:]:
+        value = int(frame)
+        if value - groups[-1][1] - 1 &lt;= MAX_GAP_FRAMES:
+            groups[-1][1] = value
+        else:
+            groups.append([value, value])
+    spans = []
+    for first, last in groups:
+        if last - first + 1 &lt; MIN_SPAN_FRAMES:
+            continue
+        start, end = first * FRAME, min(sample_count, (last + 1) * FRAME)
+        spans.append({"start_sample": start, "end_sample": end,
+                      "start_seconds": round(start / SR, 3),
+                      "end_seconds": round(end / SR, 3)})
+    return spans</code></pre><h3>Integration boundaries</h3><p>Streaming integration needs per-session state isolation, input sampling policy, and end-of-stream handling. No annotation-based recall or precision was measured.</p></section>
 <section><h2>04 | Measured output: actual probability envelopes</h2><div class="columns"><div class="panel"><div class="metric">844 frames</div><strong>Real ONNX speech probabilities</strong></div><div class="panel"><div class="metric">9 spans</div><strong>Simplified candidate intervals</strong></div><div class="panel"><div class="metric">0.999996</div><strong>Maximum observed frame probability</strong></div><div class="panel"><div class="metric">PASS</div><strong>Independent frame-by-frame replay</strong></div></div><p>Below is not an invented sound wave or conceptual probability line. The published graph summarizes real neural outputs from <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39712628842">GitHub Actions #39712628842</a>. For readability, each 10-frame time bin shows its genuine observed minimum and maximum, rounded to 0.01; the nine green spans use the original timestamp boundaries. A plotted range is not an accuracy metric.</p><div class="svgwrap"><svg viewBox="0 0 920 360" role="img" aria-label="Silero VAD 已核验真实语音概率：844帧按每10帧聚合成85段上下界概率曲线，显示9个真实后处理检测区间">
 <title>Measured VAD probability envelope and nine candidate spans</title><desc>Actual independently audited model outputs. Blue lines show observed min/max within 10-frame windows; green spans come from simplified thresholding and are not labeled ground truth.</desc><rect width="920" height="360" rx="12" fill="white"/>
 <text x="58" y="24" fill="#244960" font-size="18" font-weight="bold">Real model probabilities · 27-second audio</text>

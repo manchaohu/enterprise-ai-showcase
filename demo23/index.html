@@ -5,7 +5,7 @@
 <style>
 :root{font:16px/1.78 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203449;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1010px;margin:auto;padding:32px 22px 88px}a{color:#126393}a:focus-visible{outline:3px solid #317eb4;outline-offset:3px}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.3;margin:12px 0}h2{font-size:1.48rem;line-height:1.4;margin:0 0 13px}h3{font-size:1.12rem;margin:0 0 6px}p{margin:10px 0 17px}.eyebrow{font-size:.86rem;color:#2a6c8a;font-weight:700;letter-spacing:.05em}.muted{color:#56697a}section{background:#fff;border:1px solid #dfe8f0;border-radius:17px;margin:22px 0;padding:27px}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.panel{background:#f6f9fc;border:1px solid #dce7ef;border-radius:12px;padding:17px}.metric{font-size:1.9rem;color:#14658b;font-weight:800;line-height:1.25}.small{font-size:.88rem;color:#596c7b}.svgwrap{border:1px solid #d8e4ef;border-radius:12px;background:#f9fcff;margin:17px 0;padding:12px;overflow:hidden}svg{width:100%;height:auto;display:block}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.step{background:#ebf4f8;border-radius:10px;padding:12px;text-align:center;font-size:.92rem}.note{border-left:4px solid #c18a3d;background:#fff9ee;padding:16px;border-radius:6px}ul{padding-left:23px}li{margin:7px 0}.links a{margin-right:15px;display:inline-block}footer{color:#657789;border-top:1px solid #dfe7ef;margin-top:30px;padding-top:20px;font-size:.88rem}@media(max-width:680px){section{padding:19px}.columns,.steps{grid-template-columns:1fr}main{padding:22px 15px 55px}}
 .language-bar{display:flex;gap:14px;justify-content:flex-end;align-items:center;margin-bottom:16px;font-size:.96rem}.language-bar strong{color:#214e71}@media(max-width:700px){.language-bar{justify-content:flex-start}}</style></head><body><main><nav class="language-bar" aria-label="语言 / Language"><strong lang="zh-CN">中文</strong><a href="../en/demo23/index.html" lang="en">English</a></nav>
-<header><div class="eyebrow">企业 AI 技术实验室 · 跨领域教程验证 01 · 公开试阅版</div><h1>AI 怎样知道一段录音中，哪里有人在说话？</h1>
+<header><div class="eyebrow">企业 AI 技术实验室 · 跨领域教程验证 01 · 公开试阅版</div><h1>Silero VAD ONNX｜逐帧概率与语音区间抽取</h1>
 <p class="muted">Demo 23｜真实预训练 Silero VAD：从声音信号到语音活动概率，再到可能的说话时间区间。</p><p><a href="../index.html">← 返回教程目录</a></p></header>
 <section><h2>01｜现实问题：录音中何时该开始识别文字？</h2>
 <p>想象一个语音助手持续接收麦克风声音。录音中可能有人说话，也可能夹杂短暂沉默或环境噪声。如果整段声音始终交给后续语音识别模块处理，会增加不必要的工作量；如果过早丢弃声音，又可能漏掉真实发言。系统因此需要一个前置判断：<strong>在时间轴的哪些位置，声音更可能属于人类语音？</strong></p>
@@ -33,7 +33,58 @@
 <g fill="#526879" font-size="12"><text x="20" y="125">0</text><text x="51" y="125">1</text><text x="423" y="125">13</text><text x="454" y="125">14</text><text x="826" y="125">26</text><text x="857" y="125" text-anchor="end">27s</text></g>
 </svg></div>
 <p class="small">浅蓝部分来自公开上游测试录音；灰色部分为程序构造的静音。该图依据输入生成代码的确定时长绘制，不表示已经取得逐采样波形或人工语音标注。</p>
-</section>
+</section><section data-engineering-review="v0.5" style="border:1px solid #c7d9e8;border-radius:12px;padding:22px;background:#fafcff"><h2>工程实现｜状态连续传递和区间后处理</h2><p><small>真实运行源码节选，完整代码见私有仓库：<code>projects/23-real-vad/vad_e2e.py</code></small></p><h3>带上下文的 ONNX 逐帧推理</h3><p>16 kHz 单声道 PCM 每 512 样本一帧（32ms）。Silero ONNX 图不仅接收 64 样本连续上下文，还接收上帧返回的 `state` 张量；状态更新后传给下一帧。未满帧补零，检查 ONNX 输入名、概率范围与状态形状，避免静默生成错误。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def model_scores(model: Path, signal: np.ndarray) -&gt; tuple[np.ndarray, dict]:
+    import onnxruntime as ort
+
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1
+    options.inter_op_num_threads = 1
+    session = ort.InferenceSession(str(model), sess_options=options, providers=["CPUExecutionProvider"])
+    inputs = {x.name: x for x in session.get_inputs()}
+    if set(inputs) != {"input", "state", "sr"}:
+        raise AssertionError(f"wrong Silero ONNX inputs: {list(inputs)}")
+    state = np.zeros((2, 1, 128), dtype=np.float32)
+    context = np.zeros((1, CONTEXT), dtype=np.float32)
+    scores = []
+    tic = time.perf_counter()
+    for i in range(0, len(signal), FRAME):
+        chunk = np.asarray(signal[i:i + FRAME], dtype=np.float32)
+        if len(chunk) != FRAME:
+            chunk = np.pad(chunk, (0, FRAME - len(chunk)))
+        model_input = np.concatenate((context, chunk.reshape(1, FRAME)), axis=1)
+        outputs = session.run(None, {"input": model_input, "state": state, "sr": np.array(SR, dtype=np.int64)})
+        if len(outputs) != 2:
+            raise AssertionError("unexpected pretrained ONNX model output count")
+        score = float(np.asarray(outputs[0]).reshape(-1)[0])
+        state = np.asarray(outputs[1], dtype=np.float32)
+        if state.shape != (2, 1, 128) or not math.isfinite(score) or not 0 &lt;= score &lt;= 1:
+            raise AssertionError("invalid VAD state or probability")
+        scores.append(score)
+        context = model_input[:, -CONTEXT:].copy()</code></pre><h3>阈值筛选、间隙合并与区间计算</h3><p>概率超过 0.50 的帧构成候选，高概率段之间最多跨越 4 帧的间隙，长度少于 6 帧的段被过滤；再按采样率换算为时间边界。这个自定义简化阈值算法不等于官方 Silero hysteresis 规则。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def segments_from_scores(scores: np.ndarray, sample_count: int) -&gt; list[dict]:
+    """Simple pedagogical threshold + short-gap merge; not Silero's official hysteresis."""
+    if sample_count &lt;= 0 or scores.ndim != 1 or len(scores) != math.ceil(sample_count / FRAME):
+        raise ValueError("invalid frames vs audio length")
+    if not np.isfinite(scores).all() or np.any(scores &lt; 0) or np.any(scores &gt; 1):
+        raise ValueError("invalid VAD score distribution")
+    high = np.flatnonzero(scores &gt;= THRESHOLD)
+    if len(high) == 0:
+        return []
+    groups = [[int(high[0]), int(high[0])]]
+    for frame in high[1:]:
+        value = int(frame)
+        if value - groups[-1][1] - 1 &lt;= MAX_GAP_FRAMES:
+            groups[-1][1] = value
+        else:
+            groups.append([value, value])
+    spans = []
+    for first, last in groups:
+        if last - first + 1 &lt; MIN_SPAN_FRAMES:
+            continue
+        start, end = first * FRAME, min(sample_count, (last + 1) * FRAME)
+        spans.append({"start_sample": start, "end_sample": end,
+                      "start_seconds": round(start / SR, 3),
+                      "end_seconds": round(end / SR, 3)})
+    return spans</code></pre><h3>工程集成边界</h3><p>流式集成需要按会话隔离 state、处理输入采样率及最后一帧残留；原实验没有人工标注的 VAD 精准率或召回率。</p></section>
 <section><h2>04｜GitHub 实验实际看到了什么</h2>
 <div class="columns"><div class="panel"><div class="metric">844 帧</div><strong>真实神经网络输出</strong><p>含末帧补零；每帧的模型语音概率被保存。</p></div><div class="panel"><div class="metric">9 段</div><strong>简化后处理候选区间</strong><p>不是已标注的九段人类发言，也不是九名说话人。</p></div><div class="panel"><div class="metric">0.999996</div><strong>最大单帧概率</strong><p>一次固定输入的神经预测，不是准确率。</p></div><div class="panel"><div class="metric">8/8 PASS</div><strong>实验前契约测试</strong><p>独立核验器还重新执行 ONNX，比对所有概率与区间。</p></div></div>
 <p>固定模型、录音来源与样本哈希后，GitHub Actions <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39395316679">#39395316679</a> 已完成真实 CPU 推理及独立重放。报告还记载了单次推理环节约 <strong>145.30 毫秒</strong>的观察值；它不是端到端通话延迟、稳定的吞吐数据或生产承诺。</p>

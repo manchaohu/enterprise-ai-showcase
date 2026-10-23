@@ -3,7 +3,7 @@
 <style>
 :root{font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#172330;background:#f6f8fb;font-size:16px}*{box-sizing:border-box}body{margin:0}main{max-width:1030px;margin:auto;padding:28px 22px 84px}header{padding:38px 0 20px}.eyebrow{color:#2962a3;font-weight:700;letter-spacing:.08em;font-size:.85rem}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.22;margin:12px 0}h2{font-size:1.45rem;margin:0 0 16px}h3{margin:12px 0 8px}p{line-height:1.85;color:#38485c}section{background:white;border:1px solid #e1e8f0;border-radius:16px;margin:20px 0;padding:26px}a{color:#135c9c}a:focus,button:focus-visible{outline:3px solid #2684c7;outline-offset:3px}.tag{display:inline-block;background:#e9f1fb;color:#174d81;padding:5px 10px;border-radius:50px;margin:0 8px 8px 0;font-size:.8rem}.muted{font-size:.86rem;color:#607085}.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{padding:16px;border:1px solid #e0e7f0;border-radius:12px;background:#fbfdff}.card p{margin-bottom:0}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0}.step{background:#eef4fb;padding:16px 10px;border-radius:9px;text-align:center;font-size:.91rem}.stat{font-size:2rem;font-weight:750;color:#123c66}.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid #e8eef5;padding:10px 0}.visual{background:#eaf2f9;border-radius:10px;padding:8px}.visual svg{display:block;width:100%;height:auto}.note{border-left:4px solid #cc8834;padding:10px 15px;background:#fff8ec;color:#4e422f}.small{font-size:.88rem}ul{line-height:1.9;color:#38485c}footer{font-size:.85rem;color:#607085}@media(max-width:700px){.cols{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.step{text-align:left}}
 .language-bar{display:flex;gap:14px;justify-content:flex-end;align-items:center;margin-bottom:16px;font-size:.96rem}.language-bar strong{color:#214e71}@media(max-width:700px){.language-bar{justify-content:flex-start}}</style></head><body><main><nav class="language-bar" aria-label="语言 / Language"><strong lang="zh-CN">中文</strong><a href="../en/demo24/index.html" lang="en">English</a></nav>
-<header><div class="eyebrow">企业 AI 技术实验室 · 读者版样章 01</div><h1>一张图片，AI 怎样找到多个目标？</h1><p>从图像分类走向目标检测：模型不只判断“图中是什么”，还给出每个目标的<strong>类别、置信度与位置</strong>。</p><span class="tag">Demo 24</span><span class="tag">YOLOv8n + ONNX Runtime</span><span class="tag">GitHub CPU 真实执行通过</span></header>
+<header><div class="eyebrow">企业 AI 技术实验室 · 读者版样章 01</div><h1>YOLOv8n ONNX｜图像预处理、检测框解码与 NMS</h1><p>从图像分类走向目标检测：模型不只判断“图中是什么”，还给出每个目标的<strong>类别、置信度与位置</strong>。</p><span class="tag">Demo 24</span><span class="tag">YOLOv8n + ONNX Runtime</span><span class="tag">GitHub CPU 真实执行通过</span></header>
 <section><h2>01｜我们希望解决什么问题</h2><p>给出一张城市街景，普通图像分类模型可能告诉我们“这是一张街景照片”，但无法指出每辆车、每个人分别在哪里。目标检测解决的是更具体的问题：同时定位多个物体，并报告模型认为它们属于哪个类别。</p><div class="cols">
 <div class="card"><h3>整体分类</h3><p>输出图片层面的类别判断。它回答“这张图片主要属于什么类别”。</p></div>
 <div class="card"><h3>目标检测</h3><p>输出一组 <code>(class, confidence, x1, y1, x2, y2)</code>。它回答“有哪些物体、各在什么位置”。</p></div></div>
@@ -13,7 +13,63 @@
 <div class="card"><h3>模型输出：多个矩形框</h3><div class="visual"><svg viewBox="0 0 430 255" aria-label="原创目标框示意"><rect width="430" height="255" fill="#c7e4ef"/><rect y="154" width="430" height="101" fill="#8b9ea9"/><rect x="18" y="64" width="125" height="105" fill="#b9b8c1"/><rect x="30" y="80" width="28" height="36" fill="#edf4f8"/><rect x="76" y="80" width="28" height="36" fill="#edf4f8"/><rect x="175" y="128" width="170" height="70" rx="12" fill="#368ac0"/><rect x="194" y="136" width="75" height="30" fill="#dfedf5"/><circle cx="217" cy="197" r="17" fill="#263d4c"/><circle cx="304" cy="197" r="17" fill="#263d4c"/><circle cx="372" cy="139" r="14" fill="#9b674a"/><rect x="362" y="153" width="21" height="57" rx="6" fill="#cf7452"/><path d="M369 205l-9 32M377 205l10 32" stroke="#334855" stroke-width="8" stroke-linecap="round"/><path d="M0 233H430" stroke="#d9e4ea" stroke-dasharray="30 20" stroke-width="4"/><rect x="169" y="118" width="184" height="109" fill="none" stroke="#196ab3" stroke-width="4"/><rect x="169" y="98" width="99" height="20" fill="#196ab3"/><text x="177" y="113" font-size="14" fill="white">car · 示意</text><rect x="353" y="120" width="41" height="121" fill="none" stroke="#dc7636" stroke-width="4"/><rect x="326" y="100" width="84" height="20" fill="#dc7636"/><text x="331" y="115" font-size="13" fill="white">person</text></svg></div><p class="muted">示意框、标签均为解释用途，非本次模型测得坐标或置信度</p></div></div>
 </section>
 <section><h2>03｜从原图到目标框，模型经历什么</h2><div class="flow"><div class="step"><strong>① 图片预处理</strong><br>缩放、填充、归一化</div><div class="step"><strong>② ONNX 推理</strong><br>CPU 执行神经网络</div><div class="step"><strong>③ 类别评分</strong><br>从候选提取分数</div><div class="step"><strong>④ NMS 去重</strong><br>抑制高度重叠框</div><div class="step"><strong>⑤ 坐标还原</strong><br>映射回原图位置</div></div>
-<p>本实验输入为 <code>1×3×640×640</code> 的 RGB 张量，模型原始输出为 <code>1×84×8400</code>。这组数字并不意味着最终检测出 8,400 个物体：网络先给出大量候选，再根据置信度和重叠程度筛选。实验设置置信度阈值 <strong>0.25</strong>，NMS IoU 阈值 <strong>0.45</strong>。</p></section>
+<p>本实验输入为 <code>1×3×640×640</code> 的 RGB 张量，模型原始输出为 <code>1×84×8400</code>。这组数字并不意味着最终检测出 8,400 个物体：网络先给出大量候选，再根据置信度和重叠程度筛选。实验设置置信度阈值 <strong>0.25</strong>，NMS IoU 阈值 <strong>0.45</strong>。</p></section><section data-engineering-review="v0.5" style="border:1px solid #c7d9e8;border-radius:12px;padding:22px;background:#fafcff"><h2>工程实现｜Letterbox 与检测框去重</h2><p><small>真实运行源码节选，完整代码见私有仓库：<code>projects/24-real-object-detection/detect_e2e.py</code></small></p><h3>保持比例的 640×640 Letterbox</h3><p>将原图等比例缩放后放入 640×640 画布，保存 `scale` 和左上角补边像素。RGB 图转 NCHW float32 并除以 255；后续根据几何元数据把网络预测的框还原到原图坐标。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def letterbox(image: Image.Image) -&gt; tuple[np.ndarray, dict]:
+    rgb = image.convert("RGB")
+    w, h = rgb.size
+    if min(w, h) &lt; 8:
+        raise ValueError("source image too small")
+    scale = min(INPUT_SIZE / w, INPUT_SIZE / h)
+    nw, nh = round(w * scale), round(h * scale)
+    left = (INPUT_SIZE - nw) // 2
+    top = (INPUT_SIZE - nh) // 2
+    padded = Image.new("RGB", (INPUT_SIZE, INPUT_SIZE), (114, 114, 114))
+    padded.paste(rgb.resize((nw, nh), resample=Image.Resampling.BILINEAR), (left, top))
+    nchw = np.asarray(padded, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
+    return np.ascontiguousarray(nchw, dtype=np.float32), {
+        "source_size": [w, h], "scaled_size": [nw, nh],
+        "pad_left_top": [left, top], "scale": scale,
+    }</code></pre><h3>输出张量解码与类别内 NMS</h3><p>该模型输出形状为 `[1,84,8400]`，前四维表示中心点与宽高，其余为 80 类得分。应用先以 0.25 过滤，再按各类别对重叠框做 IoU 0.45 的 NMS，最多保留 25 框。导出格式与类别数需随模型校验。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def decode_detections(raw: np.ndarray, geometry: dict) -&gt; list[dict]:
+    if raw.shape != (1, 84, 8400) or not np.isfinite(raw).all():
+        raise ValueError(f"unexpected or invalid real YOLO output: {raw.shape}")
+    vectors = raw[0].T
+    class_scores = vectors[:, 4:]
+    classes = np.argmax(class_scores, axis=1)
+    confidences = np.max(class_scores, axis=1)
+    chosen = np.flatnonzero(confidences &gt;= CONF)
+    if len(chosen) == 0:
+        return []
+    centers = vectors[chosen, :4]
+    net_boxes = np.column_stack([
+        centers[:, 0] - centers[:, 2] / 2,
+        centers[:, 1] - centers[:, 3] / 2,
+        centers[:, 0] + centers[:, 2] / 2,
+        centers[:, 1] + centers[:, 3] / 2,
+    ])
+    left, top = geometry["pad_left_top"]
+    scale = geometry["scale"]
+    w, h = geometry["source_size"]
+    boxes = net_boxes.copy()
+    boxes[:, (0, 2)] = np.clip((boxes[:, (0, 2)] - left) / scale, 0, w)
+    boxes[:, (1, 3)] = np.clip((boxes[:, (1, 3)] - top) / scale, 0, h)
+    results = []
+    for class_id in sorted(set(int(x) for x in classes[chosen])):
+        loc = np.flatnonzero(classes[chosen] == class_id)
+        order = loc[np.argsort(-confidences[chosen[loc]], kind="stable")]
+        while len(order) and len(results) &lt; MAX_DETECTIONS:
+            selected = int(order[0])
+            box = boxes[selected]
+            if box[2] &gt; box[0] and box[3] &gt; box[1]:
+                results.append({
+                    "class_id": class_id,
+                    "confidence": float(confidences[chosen[selected]]),
+                    "xyxy": [round(float(x), 3) for x in box],
+                })
+            rest = order[1:]
+            if len(rest) == 0:
+                break
+            overlaps = iou_one_to_many(box, boxes[rest])
+            order = rest[overlaps &lt;= IOU]
+    return sorted(results, key=lambda x: (-x["confidence"], x["class_id"]))[:MAX_DETECTIONS]</code></pre><h3>工程集成边界</h3><p>检测质量并未用独立 COCO 标注集评估。生产集成需确认导出时是否已做 NMS、坐标定义、类别映射及 AGPL 商用边界。</p></section>
 <section><h2>04｜GitHub 实验真正观察到了什么</h2><div class="cols"><div class="card"><div class="row"><strong>bus.jpg</strong><span class="stat">5</span></div><p>阈值和 NMS 后的检测框数量</p></div><div class="card"><div class="row"><strong>zidane.jpg</strong><span class="stat">3</span></div><p>阈值和 NMS 后的检测框数量</p></div></div><p><strong>8/8 基础契约测试通过。</strong> 独立验证器重新执行相同预训练模型，比较原始张量、类别、置信度和框坐标。这里的 5 和 3 是两张固定照片的一次实验输出，<strong>并不是模型准确率</strong>。</p><p class="small"><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39397955909">查看真实 CPU Actions 成功记录</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/docs/TECH_BATCH_08_DEMO_24_DETECTION_REPORT_20261020.md">阅读完整实验报告</a></p></section>
 <section><h2>05｜这次实验说明了什么，也没有说明什么</h2><p>已经获得的证据说明，真实预训练 YOLOv8n 网络确实在 CPU 上执行，并且原始输出经过坐标转换与去重形成了可复算的目标框。读者可以沿着源码、模型版本、数字 Artifact 和独立验证程序检查这条链路。</p><div class="note"><strong>能力边界：</strong>目前没有人工独立标注的测试集及 mAP/Recall 评测；两张照片不足以推断现实环境的可靠性。目标框不是像素级分割掩码。模型镜像标注 AGPL-3.0，商用集成及照片再分发需要另行核验。</div></section>
 <section><h2>06｜想自己检查结果？</h2><ul><li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/24-real-object-detection">查看 Demo 24 源码与 README</a></li><li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39397955909">查看已通过的 GitHub Actions 和数字 Artifact</a></li><li><a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/24-real-object-detection/verify_evidence.py">查看独立复算程序</a></li></ul><p>不必先安装模型即可阅读本页面。若要重新执行实验，依照工程 README 在兼容环境运行；所有指标应以新运行证据为准。</p></section>

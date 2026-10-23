@@ -1,5 +1,5 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI 怎样沿着关系找到多跳证据？｜Demo 27</title><meta name="description" content="真实 SQLite 关系图查询：从人工整理的证据边到BFS多跳路径、可追溯原文与独立穷举核验。"><style>:root{font:16px/1.8 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#233548;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:1040px;margin:auto;padding:38px 22px 85px}h1{font-size:clamp(2rem,4.6vw,2.8rem);line-height:1.27;margin:12px 0}h2{font-size:1.52rem;line-height:1.4;margin:0 0 15px}h3{font-size:1.14rem;margin:10px 0}p{margin:12px 0 17px}a{color:#135f95}a:focus-visible{outline:3px solid #257dbd;outline-offset:3px}section{border:1px solid #dbe6f0;border-radius:17px;background:white;padding:27px;margin:20px 0}.eyebrow{color:#2b6e94;font-size:.86rem;letter-spacing:.05em;font-weight:800}.sub,.small,figcaption{color:#53677a}.small,figcaption{font-size:.88rem}.intro{max-width:820px}.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.panel{background:#f5f9fc;border:1px solid #e0eaf1;border-radius:12px;padding:17px}.stat{font-size:1.8rem;color:#16577f;font-weight:800}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.step{background:#eaf4fa;border-radius:12px;padding:15px;text-align:center;font-size:.92rem}.illustration{background:#f8fbff;border:1px solid #dbe6ed;border-radius:13px;padding:15px;overflow:hidden;margin:19px 0}svg{display:block;width:100%;height:auto}.note{border-left:4px solid #c38e42;background:#fff8ec;border-radius:7px;padding:15px}.proof{border-left:4px solid #2d8a76;background:#f1faf7;border-radius:7px;padding:15px}code{background:#edf2f8;padding:1px 4px;border-radius:4px}ul{padding-left:24px}li{margin:6px 0}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:12px 9px;border-bottom:1px solid #dce6ef;text-align:left}th{background:#f1f6fa}td.num{text-align:right}footer{border-top:1px solid #d9e5ef;margin-top:30px;padding-top:18px;color:#627486;font-size:.87rem}@media(max-width:700px){main{padding:24px 15px 65px}section{padding:19px}.cols,.steps{grid-template-columns:1fr}table{font-size:.85rem}th,td{padding:8px 4px}}.language-bar{display:flex;gap:14px;justify-content:flex-end;align-items:center;margin-bottom:16px;font-size:.96rem}.language-bar strong{color:#214e71}@media(max-width:700px){.language-bar{justify-content:flex-start}}</style></head><body><main><nav class="language-bar" aria-label="语言 / Language"><strong lang="zh-CN">中文</strong><a href="../en/demo27/index.html" lang="en">English</a></nav>
-<header><div class="eyebrow">企业 AI 技术实验室 · Demo 27 · 公开试阅</div><h1>一个问题需要跨越三层关系，系统怎样找到证据？</h1><p class="sub intro">真实 SQLite 关系图与多跳查询实验：从“找一篇文档”进入“沿着多条事实关系查找路径”，理解图检索的价值与局限。</p><p><a href="../index.html">← 返回教程首页</a></p></header>
+<header><div class="eyebrow">企业 AI 技术实验室 · Demo 27 · 公开试阅</div><h1>SQLite + BFS｜带来源引句的有向多跳路径查询</h1><p class="sub intro">真实 SQLite 关系图与多跳查询实验：从“找一篇文档”进入“沿着多条事实关系查找路径”，理解图检索的价值与局限。</p><p><a href="../index.html">← 返回教程首页</a></p></header>
 <section><h2>01｜现实问题：一个答案藏在多份材料中</h2>
 <p>想象企业排查某个核心服务的故障。运维人员的问题是：“维护这个服务所使用数据库的是哪个团队？”此时，第一份文档可能只写了服务依赖哪个索引组件，第二份写了该组件使用哪个数据库，第三份才写数据库由哪个团队维护。单独阅读任何一份资料，可能都无法直接回答。</p>
 <p><strong>图关系查询把问题从“寻找相似文本”扩展为“沿着实体关系寻找证据路径”。</strong> 我们可以把服务、索引组件、数据库和团队当作节点；“依赖”“运行在”“负责维护”成为有方向的边。沿着这些边连接，系统就能够回答跨多篇材料的问题。</p></section>
@@ -18,7 +18,32 @@
 </svg></div></section>
 <section><h2>03｜工程流程：先建立可信关系，再执行有向遍历</h2>
 <div class="steps"><div class="step"><strong>① 读取资料</strong><div>5 篇构造短文</div></div><div class="step"><strong>② 校验关系</strong><div>5 条边与原文匹配</div></div><div class="step"><strong>③ SQLite 查询</strong><div>BFS 找最短有向路径</div></div><div class="step"><strong>④ 独立验算</strong><div>穷举全部候选路径</div></div></div>
-<p>初始化时，程序要求每条关系引用的文档真实存在，并且附带的引句确实出现在这篇原文中。随后把边加载进 SQLite 内存库，以起点为条件查找下一跳，并在搜索时记录已走过的节点，防止重复访问。达到用户指定的最大跳数，就停止进一步扩展。</p><p>这种方法揭示了图查询与文本检索的重要区别：<strong>即使两个实体之间没有直接的文本相似性，只要存在受支持的有向关系路径，就可以通过一跳接一跳找到联系。</strong> 路径是否合理仍然取决于前期建图是否正确、关系含义是否可信。</p></section>
+<p>初始化时，程序要求每条关系引用的文档真实存在，并且附带的引句确实出现在这篇原文中。随后把边加载进 SQLite 内存库，以起点为条件查找下一跳，并在搜索时记录已走过的节点，防止重复访问。达到用户指定的最大跳数，就停止进一步扩展。</p><p>这种方法揭示了图查询与文本检索的重要区别：<strong>即使两个实体之间没有直接的文本相似性，只要存在受支持的有向关系路径，就可以通过一跳接一跳找到联系。</strong> 路径是否合理仍然取决于前期建图是否正确、关系含义是否可信。</p></section><section data-engineering-review="v0.5" style="border:1px solid #c7d9e8;border-radius:12px;padding:22px;background:#fafcff"><h2>工程实现｜关系证据校验与 BFS 路径查询</h2><p><small>真实运行源码节选，完整代码见私有仓库：<code>projects/27-graph-multihop/graph_e2e.py</code></small></p><h3>从构造原文建立有来源的关系边</h3><p>`load` 校验 relation 的文档 ID 存在，并要求引句能够在对应文档原文里找到。`graph_db` 将源节点、关系谓词、目标节点、文档 ID 和原文引句放入 SQLite。这些关系来自人工构造资料，实验没有自动抽取实体或图谱构建模型。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def load():
+    d=json.loads(DATA.read_text(encoding="utf8"))
+    docs={x["id"]:x["text"] for x in d["documents"]}
+    assert len(docs)==len(d["documents"])
+    for r in d["relations"]:
+        assert r["document_id"] in docs and r["quote"] in docs[r["document_id"]]
+        assert all(r[k] for k in ("source","target","predicate"))
+    return d
+
+def graph_db(d):
+    db=sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE edges (src TEXT, predicate TEXT, dst TEXT, document_id TEXT, quote TEXT)")
+    db.executemany("INSERT INTO edges VALUES (?,?,?,?,?)",[(r["source"],r["predicate"],r["target"],r["document_id"],r["quote"]) for r in d["relations"]])
+    return db</code></pre><h3>有向 BFS 搜索最短证据路径</h3><p>队列元素包含当前节点、累计边路径和本路径访问节点集合。逐层扩展有向边，在 `max_hops` 边数限制内找到第一条到达目标的路径并返回附有原文引句的各条边；找不到返回 `None`，起终点相同返回空列表。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def shortest_path(db, start, end, max_hops):
+    if start==end: return []
+    queue=deque([(start,[],{start})])
+    while queue:
+        node,path,visited=queue.popleft()
+        if len(path)&gt;=max_hops: continue
+        rows=db.execute("SELECT src,predicate,dst,document_id,quote FROM edges WHERE src=? ORDER BY predicate,dst,document_id",(node,)).fetchall()
+        for a,p,b,d,q in rows:
+            edge={"source":a,"predicate":p,"target":b,"document_id":d,"quote":q}
+            nextpath=path+[edge]
+            if b==end:return nextpath
+            if b not in visited:queue.append((b,nextpath,visited|{b}))
+    return None</code></pre><h3>工程集成边界</h3><p>企业集成需增加可审计抽取、文档权限继承、关系更新与大图性能设计。最短路径不证明所引用的原文陈述为真。</p></section>
 <section><h2>04｜真实实验：两跳、三跳和找不到的路径</h2>
 <div class="cols">
 <div class="panel"><div class="stat">2 跳</div><h3>Atlas → Gamma</h3><p><strong>Atlas → Beta → Gamma</strong>。依据：<code>doc-a</code> 的“依赖”关系及 <code>doc-b</code> 的“运行在”关系。</p></div>

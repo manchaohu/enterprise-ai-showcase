@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>从检测框到像素掩码｜Demo 25 读者版</title><meta name="description" content="真实预训练 SegFormer B0 语义分割技术教程，了解每个像素如何获得语义类别。"><style>
 :root{font:16px/1.75 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203047;background:#f3f6fb}*{box-sizing:border-box}body{margin:0}main{max-width:1020px;margin:auto;padding:30px 22px 85px}a{color:#135f9a}header{padding:32px 0}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.3;margin:12px 0}h2{font-size:1.5rem;margin-top:0}h3{margin-bottom:6px}p{margin:10px 0 17px}section{background:white;border:1px solid #dfe7f1;border-radius:18px;padding:28px;margin:20px 0}.eyebrow{letter-spacing:.06em;color:#2a699f;font-weight:700;font-size:.85rem}.sub{color:#526477}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.panel{background:#f7faff;border:1px solid #dfe8f4;padding:18px;border-radius:12px}.drawing{display:block;width:100%;height:auto;margin-top:14px;border-radius:10px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.step{padding:14px;background:#edf5fa;border-radius:10px;text-align:center}.note{padding:16px;background:#fff8ee;border-left:4px solid #c48b39}.metric{font-size:1.6rem;font-weight:750;color:#174c77}.links a{display:inline-block;margin:0 14px 8px 0}.small{font-size:.88rem;color:#607286}ul{padding-left:24px}@media(max-width:700px){.columns,.steps{grid-template-columns:1fr}section{padding:19px}}a:focus-visible{outline:3px solid #287cc4;outline-offset:3px}.language-bar{display:flex;gap:14px;justify-content:flex-end;align-items:center;margin-bottom:16px;font-size:.96rem}.language-bar strong{color:#214e71}@media(max-width:700px){.language-bar{justify-content:flex-start}}</style></head><body><main><nav class="language-bar" aria-label="语言 / Language"><strong lang="zh-CN">中文</strong><a href="../en/demo25/index.html" lang="en">English</a></nav>
-<header><div class="eyebrow">企业 AI 技术实验室 · 读者版样章 02</div><h1>从目标检测框，到每一个像素的类别</h1><p class="sub">Demo 25：SegFormer B0 真实预训练语义分割。理解 AI 如何把整张图片变成一幅有语义的区域地图。</p><p><a href="../demo24/index.html">← 先读 Demo 24：目标检测</a></p></header>
+<header><div class="eyebrow">企业 AI 技术实验室 · 读者版样章 02</div><h1>SegFormer｜语义分割推理、像素分类与掩码核验</h1><p class="sub">Demo 25：SegFormer B0 真实预训练语义分割。理解 AI 如何把整张图片变成一幅有语义的区域地图。</p><p><a href="../demo24/index.html">← 先读 Demo 24：目标检测</a></p></header>
 <section><h2>01｜为什么有了目标检测，还需要分割？</h2><p>前一个实验的 YOLO 能定位物体，告诉我们矩形框大致覆盖哪些对象。但矩形框包括背景：路面、天空或其他物体也可能落在框内。假设我们关心的是道路可通行区域、建筑轮廓或图像中的每一片地表，矩形框就不够精确。</p><p><strong>语义分割的任务是让模型为图像中的每个像素预测一个类别。</strong> 属于“道路”的像素共享同一类别，属于“天空”的像素共享另一类别。它关注区域含义，而不是分别给同一类别的每个物体独立编号。</p>
 <div class="columns"><div class="panel"><strong>目标检测（Demo 24）</strong><p>主要输出：类别、置信度、矩形坐标。</p></div><div class="panel"><strong>语义分割（Demo 25）</strong><p>主要输出：与原图同宽高的类别掩码；每个像素对应一个类别 ID。</p></div></div></section>
 <section><h2>02｜检测框与语义掩码的直观区别</h2><p>下面是原创的概念示意，用简化的道路、建筑和天空来说明两类模型的输出差异。<strong>两幅示意均不是 GitHub 实验生成的真实照片或预测。</strong></p>
@@ -9,7 +9,40 @@
 <div class="panel"><h3>掩码：像素属于哪一类</h3><svg class="drawing" viewBox="0 0 440 270" role="img" aria-label="像素级语义分割掩码示意"><rect width="440" height="270" fill="#6fb8dc"/><rect x="20" y="68" width="130" height="140" fill="#9985c6"/><rect x="164" y="102" width="78" height="108" fill="#9985c6"/><path d="M0 214H440V270H0Z" fill="#daae60"/><rect x="270" y="178" width="105" height="51" rx="12" fill="#66a385"/><circle cx="291" cy="231" r="12" fill="#66a385"/><circle cx="353" cy="231" r="12" fill="#66a385"/><rect x="5" y="8" width="78" height="24" fill="#fff" opacity=".95"/><text x="10" y="25" font-size="15" fill="#23415a">天空</text><rect x="16" y="146" width="61" height="23" fill="#fff" opacity=".95"/><text x="21" y="162" font-size="15" fill="#23415a">建筑</text><rect x="10" y="238" width="61" height="23" fill="#fff" opacity=".95"/><text x="14" y="255" font-size="15" fill="#23415a">道路</text></svg><p class="small">每种示意颜色代表一个语义类别，不代表本实验的实际调色板或类别分布。</p></div>
 </div></section>
 <section><h2>03｜真实模型如何生成掩码</h2><div class="steps"><div class="step"><strong>① 图像准备</strong><div>读取照片，转换为模型所需输入</div></div><div class="step"><strong>② SegFormer 推理</strong><div>CPU 前向执行预训练神经网络</div></div><div class="step"><strong>③ 像素对齐</strong><div>将 logits 插值回原图大小</div></div><div class="step"><strong>④ 类别决策</strong><div>每像素取最高类别得分并生成 PNG 掩码</div></div></div>
-<p>本实验用的是 <strong>SegFormer B0（ADE20K 微调权重）</strong>。模型会为图像的空间位置输出各类别分数（logits），经过上采样对齐原始照片宽高，再对类别维度取 <code>argmax</code>。结果可以保存为灰度类别索引图，每个像素值是一个类别 ID，而不是目标框。</p></section>
+<p>本实验用的是 <strong>SegFormer B0（ADE20K 微调权重）</strong>。模型会为图像的空间位置输出各类别分数（logits），经过上采样对齐原始照片宽高，再对类别维度取 <code>argmax</code>。结果可以保存为灰度类别索引图，每个像素值是一个类别 ID，而不是目标框。</p></section><section data-engineering-review="v0.5" style="border:1px solid #c7d9e8;border-radius:12px;padding:22px;background:#fafcff"><h2>工程实现｜Logits 上采样与像素标签</h2><p><small>真实运行源码节选，完整代码见私有仓库：<code>projects/25-real-segmentation/segment_e2e.py</code></small></p><h3>模型分类分数恢复至原图分辨率</h3><p>`SegformerImageProcessor` 负责图像预处理，模型输出类别 logits。先使用双线性插值将连续 logits 恢复到原始宽高，再沿类别维 `argmax` 选最可能的语义类别，生成每像素整数标签。不要直接把离散类别图拿来插值。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def inference(img, processor, model):
+    inputs = processor(images=img, return_tensors="pt")
+    with torch.inference_mode():
+        logits = model(**inputs).logits
+        resized = torch.nn.functional.interpolate(logits, size=(img.height, img.width), mode="bilinear", align_corners=False)
+        mask = resized.argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+    return logits.cpu().numpy(), mask</code></pre><h3>原始 logits、标签掩码与像素校验</h3><p>将类别 ID 掩码保存 PNG，原始数值 logits 保存在 NPZ；`np.bincount` 统计每类像素数，校验总数等于图像面积。掩码是类别索引，不是自动生成的人眼友好彩图。第三方原始照片用后删除，不在 Artifact 传播。</p><pre style="white-space:pre;overflow-x:auto;background:#142c40;color:#f4f8ff;border-radius:8px;padding:16px;font-size:.84rem"><code>def main():
+    torch.set_num_threads(2)
+    OUT.mkdir(exist_ok=True)
+    rev = HfApi().model_info(MODEL).sha
+    processor = SegformerImageProcessor.from_pretrained(MODEL, revision=rev)
+    model = SegformerForSemanticSegmentation.from_pretrained(MODEL, revision=rev).eval().cpu()
+    photo = Path("artifacts/_source.jpg")
+    urllib.request.urlretrieve(PHOTO, photo)
+    image = Image.open(photo).convert("RGB")
+    raw, mask = inference(image, processor, model)
+    # This transparent-free indexed mask is a direct model pixel classification, not a mock drawing.
+    Image.fromarray(mask).save(OUT / "semantic_mask.png")
+    np.savez_compressed(OUT / "raw_logits.npz", logits=raw)
+    counts = np.bincount(mask.ravel(), minlength=int(model.config.num_labels))
+    classes = [{"id":int(i),"name":str(model.config.id2label[i]),"pixels":int(v)}
+               for i,v in enumerate(counts) if v]
+    evidence = {
+        "model":MODEL, "model_revision":rev, "source_url":PHOTO,
+        "source_sha256":sha256(photo), "size":[image.width,image.height],
+        "logits_shape":list(raw.shape), "mask_shape":list(mask.shape),
+        "mask_sha256":sha256(OUT / "semantic_mask.png"),
+        "classes":classes, "pixel_total":int(mask.size),
+        "processor":processor.to_dict(), "torch_version":torch.__version__
+    }
+    (OUT / "segmentation_evidence.json").write_text(json.dumps(evidence, indent=2, default=str))
+    # Source third-party photograph is not redistributed.
+    photo.unlink()
+    assert len(classes)&gt;1 and sum(c["pixels"] for c in classes)==image.width*image.height</code></pre><h3>工程集成边界</h3><p>仅完成 ADE 场景语义分割；没有同类不同实例的识别，也没有标注集上的 mIoU 验证。</p></section>
 <section><h2>04｜哪些证据证明真实模型被执行？</h2><p>与只展示一张漂亮的彩色图不同，工程保留了验证链：预训练模型的固定版本、原图来源及哈希、原始 logits、最终像素掩码、每类像素统计，以及独立验证脚本。</p>
 <div class="columns"><div class="panel"><div class="metric">SUCCESS</div><strong>真实 CPU E2E</strong><p>SegFormer 专项 GitHub Actions 已通过。</p></div><div class="panel"><div class="metric">逐像素核验</div><strong>独立模型重放</strong><p>重新执行同一模型，比对张量与掩码。</p></div></div>
 <p>这说明网络前向计算及最终掩码处理链路与留存证据相符。<strong>它不等于模型在人工标注测试集上的分割准确率。</strong></p>
