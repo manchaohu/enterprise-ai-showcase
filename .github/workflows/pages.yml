@@ -68,6 +68,8 @@ jobs:
           path: _site
   deploy:
     if: github.ref == 'refs/heads/main'
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -79,3 +81,26 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  smoke:
+    name: Verify public Pages URLs
+    needs: deploy
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check published Chinese and English pages over HTTPS
+        env:
+          SITE_URL: ${{ needs.deploy.outputs.page_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${SITE_URL%/}"
+          test -n "$base"
+          for path in index.html en/index.html demo01/index.html demo02/index.html en/demo02/index.html demo11/index.html demo14/index.html demo17/index.html demo18/index.html; do
+            file="$(mktemp)"
+            curl --fail --location --silent --show-error --retry 8 --retry-all-errors --retry-delay 6 \
+              -H 'Cache-Control: no-cache' "$base/$path?commit=$GITHUB_SHA" -o "$file"
+            test -s "$file"
+            grep -qi '<html' "$file"
+            echo "LIVE_OK $base/$path bytes=$(wc -c < "$file")"
+            rm -f "$file"
+          done
