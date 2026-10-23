@@ -30,8 +30,8 @@ jobs:
           from html.parser import HTMLParser
           from shutil import copy2
           ids = [f'{number:02d}' for number in range(1, 28)]
-          pages = ['index.html', 'en/index.html'] + [f'demo{number}/index.html' for number in ids] + [f'en/demo{number}/index.html' for number in ids] + ['coding-agent/ca01/index.html']
-          assert len(pages) == 57
+          pages = ['index.html', 'en/index.html'] + [f'demo{number}/index.html' for number in ids] + [f'en/demo{number}/index.html' for number in ids] + ['coding-agent/ca01/index.html', 'coding-agent/ca03/index.html']
+          assert len(pages) == 58
           out = Path('_site')
           for name in pages:
               src=Path(name)
@@ -50,8 +50,8 @@ jobs:
               for link in parser.links:
                   if link.startswith(('https://','http://','mailto:','#')):continue
                   local=link.split('#')[0].split('?')[0]
-                  assert (out/name).parent.joinpath(local).is_file(),(name,link)
-          assert len(list(out.rglob('*.html'))) == 57
+                  assert ((out/name).parent.joinpath(local).is_file() or (out/name).parent.joinpath(local, 'index.html').is_file()),(name,link)
+          assert len(list(out.rglob('*.html'))) == 58
           for number in ids:
               zh = (out/f'demo{number}/index.html').read_text(encoding='utf-8')
               en = (out/f'en/demo{number}/index.html').read_text(encoding='utf-8')
@@ -61,7 +61,7 @@ jobs:
               assert '<html lang="en">' in en, number
           assert (out/'index.html').read_text(encoding='utf-8').count('class="card"') == 27
           assert (out/'en/index.html').read_text(encoding='utf-8').count('class="card"') == 27
-          print('Validated 57 pages: 27 bilingual demos, two catalogs, one Coding Agent tutorial, and local links')
+          print('Validated 58 pages: 27 bilingual demos, two catalogs, two Coding Agent pages, and local links')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
           base="${SITE_URL%/}"
           test -n "$base"
-          paths=(index.html en/index.html coding-agent/ca01/index.html)
+          paths=(index.html en/index.html coding-agent/ca01/index.html coding-agent/ca03/index.html)
           for n in $(seq -w 1 27); do
             paths+=("demo${n}/index.html" "en/demo${n}/index.html")
           done
