@@ -7,6 +7,7 @@ on:
       - 'index.html'
       - 'demo*/**'
       - 'en/**'
+      - 'coding-agent/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -29,8 +30,8 @@ jobs:
           from html.parser import HTMLParser
           from shutil import copy2
           ids = [f'{number:02d}' for number in range(1, 28)]
-          pages = ['index.html', 'en/index.html'] + [f'demo{number}/index.html' for number in ids] + [f'en/demo{number}/index.html' for number in ids]
-          assert len(pages) == 56
+          pages = ['index.html', 'en/index.html'] + [f'demo{number}/index.html' for number in ids] + [f'en/demo{number}/index.html' for number in ids] + ['coding-agent/ca01/index.html']
+          assert len(pages) == 57
           out = Path('_site')
           for name in pages:
               src=Path(name)
@@ -50,7 +51,7 @@ jobs:
                   if link.startswith(('https://','http://','mailto:','#')):continue
                   local=link.split('#')[0].split('?')[0]
                   assert (out/name).parent.joinpath(local).is_file(),(name,link)
-          assert len(list(out.rglob('*.html'))) == 56
+          assert len(list(out.rglob('*.html'))) == 57
           for number in ids:
               zh = (out/f'demo{number}/index.html').read_text(encoding='utf-8')
               en = (out/f'en/demo{number}/index.html').read_text(encoding='utf-8')
@@ -60,7 +61,7 @@ jobs:
               assert '<html lang="en">' in en, number
           assert (out/'index.html').read_text(encoding='utf-8').count('class="card"') == 27
           assert (out/'en/index.html').read_text(encoding='utf-8').count('class="card"') == 27
-          print('Validated 56 bilingual pages: 27 Chinese + 27 English demos, two indexes, and local links')
+          print('Validated 57 pages: 27 bilingual demos, two catalogs, one Coding Agent tutorial, and local links')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
@@ -95,7 +96,7 @@ jobs:
           set -euo pipefail
           base="${SITE_URL%/}"
           test -n "$base"
-          for path in index.html en/index.html demo01/index.html demo02/index.html en/demo02/index.html demo11/index.html demo14/index.html demo17/index.html demo18/index.html; do
+          for path in index.html en/index.html demo01/index.html demo02/index.html en/demo02/index.html demo11/index.html demo14/index.html demo17/index.html demo18/index.html demo04/index.html en/demo04/index.html demo08/index.html demo10/index.html demo12/index.html demo19/index.html demo20/index.html demo22/index.html demo26/index.html coding-agent/ca01/index.html; do
             file="$(mktemp)"
             curl --fail --location --silent --show-error --retry 8 --retry-all-errors --retry-delay 6 \
               -H 'Cache-Control: no-cache' "$base/$path?commit=$GITHUB_SHA" -o "$file"
