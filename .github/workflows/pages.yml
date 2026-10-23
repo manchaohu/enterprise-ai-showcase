@@ -96,7 +96,11 @@ jobs:
           set -euo pipefail
           base="${SITE_URL%/}"
           test -n "$base"
-          for path in index.html en/index.html demo01/index.html demo02/index.html en/demo02/index.html demo11/index.html demo14/index.html demo17/index.html demo18/index.html demo04/index.html en/demo04/index.html demo08/index.html demo10/index.html demo12/index.html demo19/index.html demo20/index.html demo22/index.html demo26/index.html coding-agent/ca01/index.html; do
+          paths=(index.html en/index.html coding-agent/ca01/index.html)
+          for n in $(seq -w 1 27); do
+            paths+=("demo${n}/index.html" "en/demo${n}/index.html")
+          done
+          for path in "${paths[@]}"; do
             file="$(mktemp)"
             curl --fail --location --silent --show-error --retry 8 --retry-all-errors --retry-delay 6 \
               -H 'Cache-Control: no-cache' "$base/$path?commit=$GITHUB_SHA" -o "$file"
