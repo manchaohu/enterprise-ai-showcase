@@ -1,5 +1,81 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 22 · HNSW：真实向量近邻索引怎样兼顾速度与召回？</title><meta name="description" content="当向量数量增大时，逐条计算精确距离会消耗更多工作量。HNSW 用带层次的可导航图组织向量，让检索从有限的邻居跳转开始寻找近似 Top-k 候选。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo22/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 22 · 双语技术导读首版</div><h1>HNSW：真实向量近邻索引怎样兼顾速度与召回？</h1><p class="lead">当向量数量增大时，逐条计算精确距离会消耗更多工作量。HNSW 用带层次的可导航图组织向量，让检索从有限的邻居跳转开始寻找近似 Top-k 候选。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜技术为什么有用</h2><p>当向量数量增大时，逐条计算精确距离会消耗更多工作量。HNSW 用带层次的可导航图组织向量，让检索从有限的邻居跳转开始寻找近似 Top-k 候选。</p></section><section><h2>02｜核心技术与处理流程</h2><p>真正调用 hnswlib 的原生 HNSW 图索引，使用余弦距离和可保存的整数 ID。另用 NumPy 精确余弦 Top-10 作为对照，独立验证保存、加载后的结果与 Recall@10，并非手写数组排序冒充 ANN。<div class="flow"><div class="step"><b>01</b>建立 2048 向量库</div><div class="step"><b>02</b>原生 HNSW 建图</div><div class="step"><b>03</b>执行 36 次 Top-10</div><div class="step"><b>04</b>与精确扫描对比</div></div><p class="small">根据代码整理的流程图，不冒充实际模型输出。</p></p></section><section><h2>03｜真实执行的实验过程</h2><p>使用 2048 个可复现随机种子生成的归一化 48 维合成数值向量，构造 36 个扰动查询；保存原生二进制索引、输入向量与每一条检索输出。</p></section><section><h2>04｜已观测结果与验收证据</h2><p>36 组合成查询的平均 Recall@10=1.0，八项契约测试、真实 HNSW 构建/序列化/反序列化和独立核验全部通过。这里观察的是算法在小型构造向量上的表现。<div class="proof"><strong>限定范围 E2E 验收通过</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">GitHub Actions #39390293809</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/22-hnsw-ann">工程源码（私有）</a></div></p></section><section><h2>05｜复现程序与运行证据</h2><p>按照工程仓库环境要求执行以下命令；公开网站并不直接运行模型。<pre><code>cd projects/22-hnsw-ann
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 22 engineering tutorial, implementation details and experiment evidence"><title>Demo 22｜HNSW 近似最近邻：图索引构建、召回与持久化</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo22/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 22 · 在线审读</div><h1>Demo 22｜HNSW 近似最近邻：图索引构建、召回与持久化</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/22-hnsw-ann">22-hnsw-ann</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">39390293809</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>用 hnswlib 对 2048 条 48 维合成向量建立余弦近邻索引，执行 36 条查询、每条取 Top10，并使用暴力精确搜索作为参考计算 Recall@10。随后将索引写入磁盘再加载，比较查询 ID 和距离是否保持一致。测试真实 HNSW 索引库，但不涉及预训练向量编码器。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>随机种子 <code>20261020</code> 固定构造语料与受扰动查询，并规范化到单位长度。HNSW 初始化 <code>M=16</code>、<code>ef_construction=120</code>，查询阶段使用 <code>ef_search=100</code>；数据以单线程顺序加入，记录构建、查询与精确扫描耗时。保存二进制索引再重载后必须重新设置 <code>ef_search</code>，因为 hnswlib 文件格式不会保留该运行时参数。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 建立余弦 HNSW 索引</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/22-hnsw-ann/hnsw_e2e.py"><code>hnsw_e2e.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">index = hnswlib.Index(space=&quot;cosine&quot;, dim=DIM)
+index.init_index(max_elements=COUNT,
+  ef_construction=EF_CONSTRUCTION,M=M,random_seed=17)
+index.add_items(corpus, ids, num_threads=1)
+index.set_ef(EF)
+ann_ids, ann_distances = index.knn_query(queries,k=K,num_threads=1)
+</code></pre>
+<p><code>M</code> 控制连接数近似上限，<code>ef_construction</code> 影响构建质量和成本，<code>ef_search</code> 控制查询期候选搜索规模与召回/延迟权衡。<code>space=cosine</code> 返回余弦距离，不能当余弦相似度直接排序。单线程配置提高可重复性，并不用于证明峰值吞吐。</p>
+<h3>3.2 精确对照、Recall 与重载</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/22-hnsw-ann/hnsw_e2e.py"><code>hnsw_e2e.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">exact = np.argsort(-(queries @ corpus.T),axis=1,kind=&quot;stable&quot;)[:,:K]
+index.save_index(str(index_path))
+reloaded.load_index(str(index_path),max_elements=COUNT)
+reloaded.set_ef(EF)
+after_ids, after_distances = reloaded.knn_query(queries,k=K,num_threads=1)
+assert np.array_equal(ann_ids,after_ids)
+</code></pre>
+<p>暴力计算全部余弦得分，再取精确 TopK 作为对照，逐 query 计算交集/10。二进制持久化和数据向量都记录 SHA-256，保证报告与原始文件一致。重载验证关注相同查询是否返回相同邻居，不等同于跨版本、跨机器或动态增删索引的兼容性测试。</p>
+<h2>4. 实验结果与证据</h2>
+<p>独立验收 JSON 为 <code>DEMO_SCOPE_PASS</code>，36 条查询的 <code>mean_recall_at_k=1.0</code>、<code>min_recall_at_k=1.0</code>。本次观测精确扫描约 <code>3.533ms</code>，HNSW 构建约 <code>87.176ms</code>，36 条 ANN 查询总耗时约 <code>1.655ms</code>。这些数值来自固定小样本运行，不能外推到百万规模性能。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Verifier status</code></td>
+  <td>DEMO_SCOPE_PASS</td>
+</tr>
+<tr>
+  <td><code>Corpus vectors</code></td>
+  <td>2048</td>
+</tr>
+<tr>
+  <td><code>Dimension</code></td>
+  <td>48</td>
+</tr>
+<tr>
+  <td><code>Queries</code></td>
+  <td>36</td>
+</tr>
+<tr>
+  <td><code>Recall@10 mean/min</code></td>
+  <td>1.0/1.0</td>
+</tr>
+<tr>
+  <td><code>HNSW query ms</code></td>
+  <td>1.655163</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">One-run elapsed milliseconds (different operations)</text><text x="18" y="83" fill="#274867" font-size="16">Exact scan</text><rect x="360.0" y="67" width="14.2" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">3.5329</text><text x="18" y="132" fill="#274867" font-size="16">HNSW build</text><rect x="360.0" y="116" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">87.176</text><text x="18" y="181" fill="#274867" font-size="16">HNSW query</text><rect x="360.0" y="165" width="6.6" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">1.6552</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>可放在语义检索、图像相似搜索或推荐候选召回中，但业务向量生成、版本管理、过滤权限、索引增删、持久化恢复与冷热切换需要另行集成。上线之前应对不同 <code>M</code>/<code>ef</code> 和数据分布建立召回—延迟曲线，避免把当前 Recall 1.0 当永久保证。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/22-hnsw-ann
 python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
 python hnsw_e2e.py
-python verify_evidence.py</code></pre><p class="small">私有仓库源码与 Actions 可能需要授权才能访问；本站不再分发模型权重和私人材料。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">没有使用真实预训练文本 Embedding，也没有大规模搜索延迟、企业语料复杂分布或生产性能证明。Recall@10=1.0 并不代表 ANN 在任何任务中都完美。</div><p>本篇定位为首版双语技术导读，尚未达到原有六篇完整图文教程的深度。后续将增加更完整的应用场景、真实结果图和逐步讲解。</p></p></section><footer>Demo 22 · 基于工程验收的双语技术导读 · <a href="../index.html">目录</a></footer></main></body></html>
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>仅 2048 个合成向量及 36 个查询，未验证百万级、实时更新、权限过滤或并发。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">GitHub Actions #39390293809</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

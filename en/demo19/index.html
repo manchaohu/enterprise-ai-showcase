@@ -1,5 +1,78 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 19 · MS MARCO Cross-Encoder reranking with actual logits</title><meta name="description" content="First-stage retrieval produces candidate passages, often without ideal ordering. Cross-Encoders jointly read a query and one candidate at a time to score pairwi"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo19/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 19 · TECHNICAL FIELD GUIDE</div><h1>MS MARCO Cross-Encoder reranking with actual logits</h1><p class="lead">First-stage retrieval produces candidate passages, often without ideal ordering. Cross-Encoders jointly read a query and one candidate at a time to score pairwise relevance and reorder the shortlist.</p><p><a href="../index.html">← Back to all 27 demos</a></p><section><h2>01｜The problem to solve</h2><p>First-stage retrieval produces candidate passages, often without ideal ordering. Cross-Encoders jointly read a query and one candidate at a time to score pairwise relevance and reorder the shortlist.</p></section><section><h2>02｜How the technology works</h2><p>The genuine pretrained cross-encoder/ms-marco-MiniLM-L6-v2 model runs a joint query–passage Transformer classification head with a pinned source revision. It produces raw relevance logits rather than independent embeddings, BM25 ranks or calibrated probabilities.<div class="flow"><div class="step"><b>01</b>Provide query and candidates</div><div class="step"><b>02</b>Jointly encode each pair</div><div class="step"><b>03</b>Compute genuine logits</div><div class="step"><b>04</b>Sort and independently audit</div></div><p class="small">A schematic of the implementation steps, not an actual model output plot.</p></p></section><section><h2>03｜Actual experiment inputs</h2><p>Two constructed English queries share the same five initial passages. Expected document identifiers are excluded from model inputs and ranking. Exact query–passage pairs, tensor shapes, raw logits and final ranking evidence are saved.</p></section><section><h2>04｜Observed result and independent evidence</h2><p>The trace-inspection query ranked DOC-JAEGER first (raw logit 3.5580726); scanned-PDF OCR ranked DOC-OCR first (raw logit 9.7813416). Both rankings and independent recomputation passed.<div class="proof"><strong>Scope-bounded E2E PASS</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39374021955">GitHub Actions #39374021955</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/19-real-reranker">Engineering source (private)</a></div></p></section><section><h2>05｜Reproduce from the repository</h2><p>Run this reference command in the documented engineering environment.<pre><code>cd projects/19-real-reranker
-python -m unittest discover -s tests -v
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 19 engineering tutorial, implementation details and experiment evidence"><title>Demo 19｜Cross-Encoder reranking: joint query–passage scoring</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo19/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 19 · ONLINE REVIEW</div><h1>Demo 19｜Cross-Encoder reranking: joint query–passage scoring</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/19-real-reranker">19-real-reranker</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39374021955">39374021955</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Given five candidate passages, use a real MS MARCO Cross-Encoder to score each query–passage pair and reorder results. Constructed queries target Jaeger trace inspection and OCR on scanned PDFs. Distinct expected top results demonstrate model-based reranking on this fixture, not enterprise retrieval quality.</p>
+<h2>2. Technical design and data flow</h2>
+<p>The pinned MS MARCO MiniLM cross-encoder produces one classification logit per joint query/passage input. Each query is repeated across five candidates. The [5,1] scores are sorted descending with input-order tie breaks. Raw logits are ranking signals, not calibrated relevance probabilities.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Joint pair tokenization</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/19-real-reranker/reranker_e2e.py"><code>reranker_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">batch = tokenizer([case[&quot;query&quot;]]*len(DOCUMENTS),
+  [doc[&quot;text&quot;] for doc in DOCUMENTS],
+  padding=True,truncation=True,max_length=256,return_tensors=&quot;pt&quot;)
+with torch.inference_mode():
+    logits = model(**batch).logits
+if list(logits.shape) != [len(DOCUMENTS),1]:
+    raise RuntimeError(&quot;Unexpected trained ranking head&quot;)
+</code></pre>
+<p>A Cross-Encoder jointly encodes query and passage. Each candidate needs one paired forward computation, typically batched; long passages are truncated at 256 tokens. This differs from separately indexed bi-encoder sentence embeddings.</p>
+<h3>3.2 Rank raw model scores</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/19-real-reranker/reranker_e2e.py"><code>reranker_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">scores=[float(x) for x in logits.detach().cpu().view(-1).tolist()]
+order = sorted(range(len(DOCUMENTS)),
+               key=lambda i:(-float(scores[i]),i))
+ranked=[{&quot;rank&quot;:rank, &quot;id&quot;:DOCUMENTS[i][&quot;id&quot;],
+         &quot;model_raw_logit&quot;:round(scores[i],7)}
+         for rank,i in enumerate(order,start=1)]
+</code></pre>
+<p>Sorting uses model logits only, with input-index tie-breaking; expected IDs do not feed back into ranking. Logits may be negative and should not be compared as calibrated probabilities across unrelated queries. Reference IDs are checked only afterward.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Archived <code>REAL_CROSS_ENCODER_E2E_PASS</code>. The trace query ranks <code>DOC-JAEGER</code> first; the scanned-OCR query ranks <code>DOC-OCR</code> first. The five candidate passages are identical across queries. Full raw logits, tensor shapes and pinned revision are in the artifact.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>REAL_CROSS_ENCODER_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Model</code></td>
+  <td>cross-encoder/ms-marco-MiniLM-L6-v2</td>
+</tr>
+<tr>
+  <td><code>Resolved commit</code></td>
+  <td>fbf9045f293a58fa…</td>
+</tr>
+<tr>
+  <td><code>Trace top1</code></td>
+  <td>DOC-JAEGER</td>
+</tr>
+<tr>
+  <td><code>OCR top1</code></td>
+  <td>DOC-OCR</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 180"><rect width="830" height="180" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Cross-encoder raw top1 logits (not probabilities)</text><text x="18" y="83" fill="#274867" font-size="16">traces</text><rect x="360.0" y="67" width="127.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">3.5581</text><text x="18" y="132" fill="#274867" font-size="16">scanned_ocr</text><rect x="360.0" y="116" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">9.7813</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>Place after lexical/dense recall on a bounded candidate set. Limit token length and batch size, manage inference latency, and evaluate relevance using labels and nDCG. Cross-Encoder reranking cannot recover documents excluded by the initial retriever.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/19-real-reranker
 python -m pip install -r requirements.txt
 python reranker_e2e.py
-python verify_evidence.py</code></pre><p class="small">Source and Actions may require private-repository access; this public lesson contains no redistributed model weights or private data.</p></p></section><section><h2>06｜What cannot be concluded</h2><p><div class="note">Five supplied candidates omit first-stage retrieval and do not form a complete RAG system. Raw logits are not calibrated probabilities; two constructed queries do not establish MRR/NDCG or production ranking quality.</div><p>This is a first bilingual technical orientation. It is not yet as deeply illustrated as the six established full lessons; future iterations will enrich it with verified charts and practical scenarios.</p></p></section><footer>Demo 19 · Evidence-linked bilingual engineering guide · <a href="../index.html">All demos</a></footer></main></body></html>
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>Five constructed English passages and two queries, no first-stage retrieval module, significance analysis or load benchmark.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39374021955">GitHub Actions #39374021955</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

@@ -1,2 +1,77 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 05 · 异步队列：任务失败、重复提交后怎样恢复？</title><meta name="description" content="将长任务交给后台执行之后，系统必须决定如何应对重复提交、暂时失败、工作者崩溃和最终失败。没有可靠的状态管理，任务可能丢失、重复执行或一直卡住。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo05/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 05 · 技术导读首版</div><h1>异步队列：任务失败、重复提交后怎样恢复？</h1><p class="lead">将长任务交给后台执行之后，系统必须决定如何应对重复提交、暂时失败、工作者崩溃和最终失败。没有可靠的状态管理，任务可能丢失、重复执行或一直卡住。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>将长任务交给后台执行之后，系统必须决定如何应对重复提交、暂时失败、工作者崩溃和最终失败。没有可靠的状态管理，任务可能丢失、重复执行或一直卡住。</p></section><section><h2>02｜核心技术与实现机制</h2><p>项目基于 Python 标准库 SQLite 实现事务型队列，包括幂等请求键、租约领取、重试延期、租约过期回收、最大尝试次数、死信和成功完成。验证脚本利用模拟逻辑时钟推动状态，而没有真正启动长期运行的后台工作进程。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>幂等写入任务</div><div class="step"><b>02</b>领取租约执行</div><div class="step"><b>03</b>失败延期与回收</div><div class="step"><b>04</b>完成或死信</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>同一请求键重复提交必须返回同一任务 ID；不同内容同键必须冲突。脚本让任务失败后延时、模拟 worker 崩溃、恢复领取并最终进入 dead 状态；另一任务成功进入 done。每步读取数据库状态。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>实际 SQLite 状态迁移与断言通过，证据包含 ASYNC_SQLITE_QUEUE_E2E_PASS、dead/done 状态、重试次数、幂等拒绝与 simulated_logical_clock 字段。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39211107072" target="_blank" rel="noopener noreferrer">GitHub Actions #39211107072</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/05-async-queue" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>cd projects/05-async-queue
-python verify_queue.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">没有真实并发生产者/消费者压力、进程恢复注入或 Redis/RabbitMQ。模拟逻辑时间里的租约行为不能推出分布式队列的生产稳定性。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 05 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 05 engineering tutorial, implementation details and experiment evidence"><title>Demo 05｜SQLite 异步队列：租约、延时重试与死信状态</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo05/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 05 · 在线审读</div><h1>Demo 05｜SQLite 异步队列：租约、延时重试与死信状态</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/05-async-queue">05-async-queue</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39211107072">39211107072</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>将重复业务任务安全地保存到队列，Worker 取任务后可以成功完成、失败延时重试，进程异常时可回收过期租约；达到重试上限后进入 <code>dead</code>。本实验采用 SQLite 数据表模拟一个小规模可持续队列，时间由测试传入逻辑秒数，因此演示的是状态与事务语义，不是生产消息中间件的吞吐能力。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>表 <code>jobs</code> 保留 <code>queued/running/done/dead</code> 状态、<code>attempts</code>、<code>ready_at</code>、<code>lease_until</code>、<code>request_key</code>。提交与领取均执行 <code>BEGIN IMMEDIATE</code>，在 SQLite 写锁内完成选择和更新，以减少两个 Worker 对同一任务的竞争。失败将 <code>attempts</code> 按指数退避映射到下一次可领取时间；租约过期的 <code>running</code> 任务可再次领取。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 幂等提交与冲突检查</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/05-async-queue/queue_store.py"><code>queue_store.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">db.execute(&quot;BEGIN IMMEDIATE&quot;)
+db.execute(&quot;INSERT OR IGNORE INTO jobs(request_key,payload) VALUES (?,?)&quot;,(key,payload))
+job = db.execute(&quot;SELECT * FROM jobs WHERE request_key=?&quot;, (key,)).fetchone()
+if job[&quot;payload&quot;] != payload:
+    db.rollback()
+    raise ValueError(&quot;idempotency key conflict&quot;)
+</code></pre>
+<p><code>request_key</code> 为 UNIQUE，重复提交相同 payload 返回原记录，重用相同 key 执行不同命令则拒绝。将同一业务操作的重试限制在相同 key 上，能减少重复执行。注意这仅能约束提交，不自动保证对外部系统的副作用 exactly-once。</p>
+<h3>3.2 租约领取和失败退避</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/05-async-queue/queue_store.py"><code>queue_store.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">row = db.execute(&quot;&quot;&quot;SELECT * FROM jobs WHERE
+ (state='queued' AND ready_at&lt;=?) OR
+ (state='running' AND lease_until&lt;=?)
+ ORDER BY id LIMIT 1&quot;&quot;&quot;, (now,now)).fetchone()
+# claim updates attempts and lease_until in the same write transaction
+ready = now + (2 ** row[&quot;attempts&quot;]) if not dead else now
+</code></pre>
+<p>领取逻辑既覆盖已到期 <code>queued</code>，也覆盖租约已过期的 <code>running</code>。每次 claim 增加 <code>attempts</code>。第一次失败后以 <code>2**1=2</code> 个逻辑秒延时，再次失败同理递增；到达最大次数会进入 <code>dead</code>。生产环境需要明确租约续期、并发 Worker 争用和时钟一致性策略。</p>
+<h2>4. 实验结果与证据</h2>
+<p>证据 <code>ASYNC_SQLITE_QUEUE_E2E_PASS</code>：重复提交保持同一 job，冲突 key 被拒绝；延时重试和过期租约重新领取通过；失败任务第三次尝试进入 <code>dead</code>，另一任务成功到达 <code>done</code>。本次没有实测多节点并发、高吞吐或崩溃恢复持久化服务部署。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>ASYNC_SQLITE_QUEUE_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Retry attempts</code></td>
+  <td>3</td>
+</tr>
+<tr>
+  <td><code>Dead-letter</code></td>
+  <td>dead</td>
+</tr>
+<tr>
+  <td><code>Successful job</code></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><code>Clock</code></td>
+  <td>simulated_logical_clock</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 276"><rect width="830" height="276" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Code-state walkthrough (schematic, not durations)</text><text x="18" y="83" fill="#274867" font-size="16">Queued</text><rect x="360.0" y="67" width="116.7" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">1</text><text x="18" y="132" fill="#274867" font-size="16">Running</text><rect x="360.0" y="116" width="233.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">2</text><text x="18" y="181" fill="#274867" font-size="16">Retry attempts</text><rect x="360.0" y="165" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">3</text><text x="18" y="230" fill="#274867" font-size="16">Dead / Done</text><rect x="360.0" y="214" width="116.7" height="26" rx="5" fill="#457ea8"/><text x="725" y="232" fill="#203a55" font-size="15">1</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>可用于少量异步文件处理、通知或同步作业的状态机原型。接入 HTTP 服务时提交后立即返回 job ID，Worker 定时 claim，前端轮询状态。对重要任务需要去重范围、最大重试策略、死信排障入口、外部幂等令牌与告警；规模化可替换为成熟队列系统。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/05-async-queue
+# Install dependencies shown in this project README
+python verify_queue.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>本实验是 SQLite 单文件和逻辑时钟；没有真实消息代理、分布式锁、租约续期、生产 crash 测试。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39211107072">GitHub Actions #39211107072</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

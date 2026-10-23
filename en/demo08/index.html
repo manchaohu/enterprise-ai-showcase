@@ -1,2 +1,81 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 08 · Inference-style HTTP latency, timeout and fallback</title><meta name="description" content="Response latency can determine whether a model-dependent service fits a synchronous business path. HTTP clients need deliberate timeouts and fallback behavior r"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo08/index.html">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 08 · TECHNICAL FIELD GUIDE</div><h1>Inference-style HTTP latency, timeout and fallback</h1><p class="lead">Response latency can determine whether a model-dependent service fits a synchronous business path. HTTP clients need deliberate timeouts and fallback behavior rather than waiting indefinitely for simulated or real inference.</p><p><a href="../index.html">← All 27 demos</a></p><section><h2>01｜The practical question</h2><p>Response latency can determine whether a model-dependent service fits a synchronous business path. HTTP clients need deliberate timeouts and fallback behavior rather than waiting indefinitely for simulated or real inference.</p></section><section><h2>02｜How the system works</h2><p>A genuine threaded localhost HTTP server exposes an inference-like endpoint, but its payload is explicitly deterministic-mock—not a pretrained model. Client threads measure request elapsed time and exercise timeout-driven fallback.<div class="flow"><div class="step"><b>01</b>Start real HTTP server</div><div class="step"><b>02</b>12 calls, 4 workers</div><div class="step"><b>03</b>Measure P50 / P95</div><div class="step"><b>04</b>Timeout + fallback</div></div><p class="small">An explanatory process diagram, not model-measured output.</p></p></section><section><h2>03｜Experiment inputs and execution</h2><p>Twelve HTTP calls with an intended 25 ms service delay are issued through four worker threads. P50/P95 are computed from actual local response times; another request has 400 ms service delay but an 80 ms client timeout, forcing queued-for-later.</p></section><section><h2>04｜What acceptance actually observed</h2><p>The observed output records 12 completed requests, concurrency 4, p50_ms, p95_ms and a timeout fallback of queued-for-later, explicitly tagging real_llm=false. These are integration mechanics, not model latency measurements.<div class="proof"><strong>Bounded verification</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">GitHub Actions #39224324475</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/08-inference-latency">Source (private repo)</a></div></p></section><section><h2>05｜How to reproduce</h2><p>Reference command from the repository root; environment dependencies vary.<pre><code>cd projects/08-inference-latency
-python verify_latency.py</code></pre><p class="small">The linked source may require private repository permission; no model weights or third-party originals are republished here.</p></p></section><section><h2>06｜Limits and future deepening</h2><p><div class="note">No pretrained model, actual LLM inference or production load. Twelve local calls around a synthetic service delay cannot certify model P95, inter-region networking or operational SLOs.</div><p>A bilingual technical orientation, not yet a fully illustrated tutorial. Future versions will add verified visual evidence and worked examples.</p></p></section><footer>Demo 08 · Engineering-evidence-linked field guide · <a href="../index.html">Catalogue</a></footer></main></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 08 engineering tutorial, implementation details and experiment evidence"><title>Demo 08｜Inference-like API latency, timeouts and fallback</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo08/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 08 · ONLINE REVIEW</div><h1>Demo 08｜Inference-like API latency, timeouts and fallback</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/08-inference-latency">08-inference-latency</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">39224324475</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Measure a real HTTP service with concurrent requests, timeout and fallback. Twelve requests run via four worker threads with 25ms server delay. An additional 400ms request uses an 80ms client timeout and must return <code>queued-for-later</code>. Network and timing are real; classification is a deterministic mock, not LLM inference.</p>
+<h2>2. Technical design and data flow</h2>
+<p><code>ThreadingHTTPServer</code> exposes POST /infer, validates request size and delay, then constructs a deterministic response. The client times urllib.request and converts connection/timeout exceptions into a fallback. Percentiles use an ordered-index estimator, not a rigorous load-test distribution.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Server delay and validation</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/08-inference-latency/service.py"><code>service.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">size = int(self.headers.get(&quot;Content-Length&quot;,&quot;0&quot;))
+if not 0 &lt; size &lt;= 4096: raise ValueError(&quot;content length&quot;)
+delay = float(d.get(&quot;delay_ms&quot;,0))
+if not 0 &lt;= delay &lt;= 1000: raise ValueError(&quot;delay range&quot;)
+time.sleep(delay/1000)
+body = json.dumps({&quot;output&quot;:&quot;classified:&quot;+str(d[&quot;text&quot;])[:40],
+                   &quot;engine&quot;:&quot;deterministic-mock&quot;}).encode()
+</code></pre>
+<p><code>delay_ms</code> injects controlled blocking and distinguishes normal/timeout paths. The 4096-byte length cap limits request size. The engine marker explicitly identifies a deterministic mock. Threaded HTTP exercises real timeout behavior but not model speed.</p>
+<h3>3.2 Client timeout and quantiles</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/08-inference-latency/verify_latency.py"><code>verify_latency.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">with urllib.request.urlopen(req, timeout=timeout) as resp:
+    payload = json.loads(resp.read())
+except (TimeoutError, URLError):
+    return {&quot;kind&quot;:&quot;fallback&quot;, &quot;output&quot;:&quot;queued-for-later&quot;, ...}
+# percentile(): ordered[min(n-1,max(0,int((n-1)*p)))]
+</code></pre>
+<p>Client timeout does not guarantee the server aborted work; retryable side effects need idempotency keys. The quantile routine uses a truncated zero-based index, making p95 unstable for just twelve samples. Do not interpret it as a production SLO metric.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Archive <code>HTTP_LATENCY_FALLBACK_E2E_PASS</code>: 12 completed requests at concurrency 4, observed p50 26.25ms, p95 27.14ms, fallback <code>queued-for-later</code> after 80.47ms. These measurements are one CI run against a local deterministic service.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>HTTP_LATENCY_FALLBACK_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Backend</code></td>
+  <td>real threaded HTTP, deterministic mock model</td>
+</tr>
+<tr>
+  <td><code>p50 ms</code></td>
+  <td>26.25</td>
+</tr>
+<tr>
+  <td><code>p95 ms</code></td>
+  <td>27.14</td>
+</tr>
+<tr>
+  <td><code>Timeout ms</code></td>
+  <td>80.47</td>
+</tr>
+<tr>
+  <td><code>Real LLM</code></td>
+  <td>False</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Observed milliseconds in CI</text><text x="18" y="83" fill="#274867" font-size="16">p50</text><rect x="360.0" y="67" width="114.2" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">26.25</text><text x="18" y="132" fill="#274867" font-size="16">p95</text><rect x="360.0" y="116" width="118.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">27.14</text><text x="18" y="181" fill="#274867" font-size="16">Timeout fallback</text><rect x="360.0" y="165" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">80.47</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>Replace the mock body with actual inference to use this pattern. Define per-request IDs, cancellation/fallback semantics, queueing, concurrency limits, caching and retry policy. A real latency benchmark needs sustained load, arrival distributions and multiple concurrency levels.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/08-inference-latency
+# Install dependencies shown in this project README
+python verify_latency.py
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>No real model inference, external traffic, long-running load test or production performance claims.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">GitHub Actions #39224324475</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

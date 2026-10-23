@@ -1,3 +1,81 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 07 · JSON Schema gates: rejecting unsafe tool arguments</title><meta name="description" content="Tool payloads can be malformed, omit required fields or request unauthorized actions. The boundary between a generated JSON string and a side-effecting business"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><a href="../../demo07/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 07 · TECHNICAL FIELD GUIDE</div><h1>JSON Schema gates: rejecting unsafe tool arguments</h1><p class="lead">Tool payloads can be malformed, omit required fields or request unauthorized actions. The boundary between a generated JSON string and a side-effecting business operation needs explicit validation.</p><p><a href="../index.html">← All 27 demos</a></p></header><section><h2>01 · The problem this technology solves</h2><p>Tool payloads can be malformed, omit required fields or request unauthorized actions. The boundary between a generated JSON string and a side-effecting business operation needs explicit validation.</p></section><section><h2>02 · Core mechanism</h2><p>Draft 2020-12 JSON Schema validates object structure, required properties, enum values and extra fields before executing the SQLite-backed create_ticket operation. Inputs are crafted fixtures, not outputs of a running LLM.</p><div class="flow" aria-label="Pipeline overview"><div class="step"><b>01</b>Parse JSON payload</div><div class="step"><b>02</b>Check Draft 2020-12</div><div class="step"><b>03</b>Reject malformed requests</div><div class="step"><b>04</b>Execute valid SQLite call</div></div><p class="small">The flow diagram summarizes the implemented steps; it is not a measured model-output visualization.</p></section><section><h2>03 · What the experiment actually ran</h2><p>Five negative inputs cover invalid JSON syntax, missing request_key, an unexpected admin field, wrong priority enum and unauthorized delete_records tool. All must be rejected with zero inserts; one valid creation and its idempotent replay leave exactly one ticket.</p></section><section><h2>04 · Observed acceptance evidence</h2><p>Actual schema checks and SQLite state assertions passed; evidence reports JSON_SCHEMA_TOOL_GATE_E2E_PASS, five rejection categories and the idempotent valid replay.</p><div class="proof"><strong>Accepted within the stated scope</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39223967843" target="_blank" rel="noopener noreferrer">GitHub Actions #39223967843</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/07-structured-output" target="_blank" rel="noopener noreferrer">Source (private repo; permission may be required)</a></div></section><section><h2>05 · Reproduce the experiment</h2><p>From the repository root, use the experiment's documented runner. This snippet is a reference command, not a live in-browser executable.</p><pre><code>cd projects/07-structured-output
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 07 engineering tutorial, implementation details and experiment evidence"><title>Demo 07｜JSON Schema execution gate: validation before side effects</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo07/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 07 · ONLINE REVIEW</div><h1>Demo 07｜JSON Schema execution gate: validation before side effects</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/07-structured-output">07-structured-output</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39223967843">39223967843</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Accept an untrusted JSON tool request and block business effects unless the tool name and every required argument satisfy JSON Schema. Five crafted invalid cases must be rejected without a SQLite write. Valid creation and identical replay must succeed. No model inference is performed in this demo.</p>
+<h2>2. Technical design and data flow</h2>
+<p>An explicit Draft 2020-12 schema restricts the envelope to <code>tool</code> and <code>arguments</code>, fixes the only permitted tool to <code>create_ticket</code>, and requires request_key, title and priority without extra fields. <code>execute()</code> invokes validation before TicketStore.create(), providing a clear side-effect boundary.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Tool and field allow-list</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/07-structured-output/structured_gate.py"><code>structured_gate.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">SCHEMA = {
+  &quot;type&quot;:&quot;object&quot;, &quot;additionalProperties&quot;:False,
+  &quot;required&quot;:[&quot;tool&quot;,&quot;arguments&quot;],
+  &quot;properties&quot;:{
+    &quot;tool&quot;:{&quot;const&quot;:&quot;create_ticket&quot;},
+    &quot;arguments&quot;:{ &quot;type&quot;:&quot;object&quot;, &quot;additionalProperties&quot;:False,
+      &quot;required&quot;:[&quot;request_key&quot;,&quot;title&quot;,&quot;priority&quot;],
+      &quot;properties&quot;:{ &quot;priority&quot;:{&quot;enum&quot;:[&quot;low&quot;,&quot;normal&quot;,&quot;high&quot;]}}}}}
+</code></pre>
+<p>Both levels reject undeclared fields. A constant tool name prevents dispatch to disallowed operations. The full schema also constrains request_key pattern and title length; this excerpt is not the complete standalone schema.</p>
+<h3>3.2 Parse failure and side-effect boundary</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/07-structured-output/structured_gate.py"><code>structured_gate.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">request = json.loads(raw)
+issues = sorted(VALIDATOR.iter_errors(request), key=lambda e:(list(map(str,e.absolute_path)),e.message))
+if issues:
+    return {&quot;ok&quot;:False,&quot;category&quot;:&quot;schema_rejected&quot;,&quot;errors&quot;:[...]}
+# execute():
+result = parse_and_validate(raw)
+if not result[&quot;ok&quot;]: return result
+ticket = ticket_store.create(args[&quot;request_key&quot;], args[&quot;title&quot;])
+</code></pre>
+<p>Parsing distinguishes malformed JSON from schema violations and preserves field paths. Execution only proceeds for <code>ok=True</code>. Priority is validated as mandatory but not persisted by the underlying TicketStore—a concrete integration gap requiring an explicit data-contract decision.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Archived <code>JSON_SCHEMA_TOOL_GATE_E2E_PASS</code>: five crafted invalid requests fail before any side effect; invalid_side_effect_count is zero. The valid ticket ID is 1, and an identical repeat keeps SQLite count at one. Invalid cases are test fixtures, not generated LLM mistakes.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>JSON_SCHEMA_TOOL_GATE_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Schema</code></td>
+  <td>draft-2020-12</td>
+</tr>
+<tr>
+  <td><code>Rejected cases</code></td>
+  <td>5</td>
+</tr>
+<tr>
+  <td><code>Invalid side effects</code></td>
+  <td>0</td>
+</tr>
+<tr>
+  <td><code>SQLite count</code></td>
+  <td>1</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 325"><rect width="830" height="325" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Five crafted invalid request categories rejected</text><text x="18" y="83" fill="#274867" font-size="16">invalid_json</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">1</text><text x="18" y="132" fill="#274867" font-size="16">missing_required</text><rect x="360.0" y="116" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">1</text><text x="18" y="181" fill="#274867" font-size="16">unexpected_field</text><rect x="360.0" y="165" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">1</text><text x="18" y="230" fill="#274867" font-size="16">wrong_priority</text><rect x="360.0" y="214" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="232" fill="#203a55" font-size="15">1</text><text x="18" y="279" fill="#274867" font-size="16">wrong_tool</text><rect x="360.0" y="263" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="281" fill="#203a55" font-size="15">1</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>Place validation between an agent tool router and the business API. Schema conformance is not authorization. Add identity, resource permissions, idempotency and workflow preconditions; version schemas and regression-test invalid inputs.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/07-structured-output
 python -m pip install -r requirements.txt
-python verify_structured.py</code></pre><p class="small">Model downloads, external tools, OS-specific requirements and permissions are described in the private project. </p></section><section><h2>06 · Limits and the next deeper question</h2><p class="note">This does not test constrained LLM decoding, model generation quality, prompt-injection defenses or production authorization. The success belongs to the application validator, not the model.</p><p>This is an evidence-linked technical orientation page, not yet a full illustrated lesson. The six existing detailed tutorials retain their deeper analyses; future iterations will enrich the remaining demos with verified charts, examples and diagrams.</p></section><footer>Demo 07 · Bilingual field guide, source-linked and scope-bounded · <a href="../index.html">Back to catalogue</a></footer></main></body></html>
+python verify_structured.py
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>No actual model inference, no real identity authorization, and no priority persistence in TicketStore.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39223967843">GitHub Actions #39223967843</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

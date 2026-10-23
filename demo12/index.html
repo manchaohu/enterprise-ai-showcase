@@ -1,4 +1,80 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 12 · ResNet18：预训练模型如何给整张图片分类？</title><meta name="description" content="图像分类的最小问题是：给一张完整图片，网络输出这幅图整体可能属于什么类别。它与框出多个目标或给每个像素分配标签是不同的视觉任务。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo12/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 12 · 双语技术导读</div><h1>ResNet18：预训练模型如何给整张图片分类？</h1><p class="lead">图像分类的最小问题是：给一张完整图片，网络输出这幅图整体可能属于什么类别。它与框出多个目标或给每个像素分配标签是不同的视觉任务。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>图像分类的最小问题是：给一张完整图片，网络输出这幅图整体可能属于什么类别。它与框出多个目标或给每个像素分配标签是不同的视觉任务。</p></section><section><h2>02｜核心技术与实现机制</h2><p>真正加载 torchvision ResNet18_Weights.IMAGENET1K_V1，在 CPU 上使用官方 transforms 把 RGB 图片规范化到 224×224，神经网络输出 1000 个 logits，经 softmax 得到概率并列出 Top-5。<div class="flow"><div class="step"><b>01</b>生成并保存 PNG</div><div class="step"><b>02</b>模型 transforms 预处理</div><div class="step"><b>03</b>ResNet18 CPU 推理</div><div class="step"><b>04</b>Top-5 概率检查</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>测试图片是程序用 Pillow 制作的 256×256 RGB 几何图案，重新从 PNG 文件读取。验证输入形状 [1,3,224,224]、输出 [1,1000]、概率有限且总和约为 1，并保存类别与图像哈希。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真实 ImageNet 预训练权重和分类前向推理通过，输出 PRETRAINED_VISION_CPU_E2E_PASS。证据明确包含 accuracy_assessed=false，因为几何测试图没有真实 ImageNet 分类真值。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39351675033">GitHub Actions #39351675033</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/12-real-vision">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/12-real-vision
-python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-python -m pip install Pillow
-python verify_vision.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">模型真正运行与标签实际正确是两件事；本次没有真实照片准确率、多目标定位、像素分割、VLM 问答或生产推理 SLO。依赖包 wheel 没有全量不可变哈希。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 12 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 12 engineering tutorial, implementation details and experiment evidence"><title>Demo 12｜ResNet18 图片分类：预训练推理与 Top5 输出</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo12/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 12 · 在线审读</div><h1>Demo 12｜ResNet18 图片分类：预训练推理与 Top5 输出</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/12-real-vision">12-real-vision</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39351675033">39351675033</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>把一张程序生成的图像送入 torchvision 预训练 ResNet18，输出 1,000 类分类 logits 和 Top5 概率。目的在于验证权重真正加载、图片确实经过预处理和模型前向推理、概率满足归一化约束。构造图不对应 ImageNet 真实类别，因而不评价分类是否正确。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>测试使用 Pillow 生成 256×256 彩色几何图，保存 SHA-256；<code>ResNet18_Weights.IMAGENET1K_V1</code> 包含与权重配套的 <code>weights.transforms()</code>，把图像转成网络需要的 <code>[1,3,224,224]</code> 张量；模型输出 <code>[1,1000]</code>，经 softmax 得到概率。分类标签来自 weights 的 categories 元信息。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 预训练权重与输入张量</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/12-real-vision/verify_vision.py"><code>verify_vision.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">weights = ResNet18_Weights.IMAGENET1K_V1
+model = resnet18(weights=weights).eval().cpu()
+preprocess = weights.transforms()
+inputs = preprocess(Image.open(path).convert(&quot;RGB&quot;)).unsqueeze(0)
+assert list(inputs.shape)==[1,3,224,224]
+</code></pre>
+<p>必须使用与权重匹配的 transforms：其中包含 resize、crop、归一化等约定，不能把原始 RGB 像素数组直接输入 ResNet。<code>eval()</code> 关闭训练行为，<code>unsqueeze(0)</code> 添加入 batch 维。更新权重版本时预处理参数和分类标签都应同步检查。</p>
+<h3>3.2 Logits、softmax 和 Top5</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/12-real-vision/verify_vision.py"><code>verify_vision.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">with torch.inference_mode():
+    logits = model(inputs)
+    probs = torch.softmax(logits,dim=1)[0]
+assert list(logits.shape)==[1,1000]
+assert abs(float(probs.sum())-1) &lt; 1e-4
+top = torch.topk(probs,k=5)
+</code></pre>
+<p><code>logits</code> 是未归一化分类分数；softmax 后 1,000 项和应接近 1。Top5 只表示相对排序，不自动代表检测到“真实目标”。测试图得到 bolo tie 等标签，属于分布外输入导致的模型判断，不应该描述为正确分类结果。</p>
+<h2>4. 实验结果与证据</h2>
+<p>归档 <code>PRETRAINED_VISION_CPU_E2E_PASS</code>，输入张量 <code>[1,3,224,224]</code>、输出 <code>[1,1000]</code>、概率和为 <code>1.0</code>。Top1 为 <code>bolo tie</code>、概率 <code>0.19632</code>，后续还有 <code>loupe</code>、<code>nematode</code> 等。构造图缺乏 ImageNet 真值，不具备准确率计算基础。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>PRETRAINED_VISION_CPU_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Weights</code></td>
+  <td>ResNet18_Weights.IMAGENET1K_V1</td>
+</tr>
+<tr>
+  <td><code>Input shape</code></td>
+  <td>[1, 3, 224, 224]</td>
+</tr>
+<tr>
+  <td><code>Output shape</code></td>
+  <td>[1, 1000]</td>
+</tr>
+<tr>
+  <td><code>Top1</code></td>
+  <td>bolo tie (0.19632)</td>
+</tr>
+<tr>
+  <td><code>Accuracy assessed</code></td>
+  <td>False</td>
+</tr>
+</tbody>
+</table>
+<p><img src="data:image/png;base64,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" alt="归档的程序生成输入图像或帧接触图（非真实场景样本）" />
+<em>归档的程序生成输入图像或帧接触图（非真实场景样本）</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>集成实际分类服务时，复用权重配套 transform，统一 RGB 与尺寸，控制输入文件大小，记录版本、TopK 和推理耗时。数据类型迁移到企业图片后，必须建立标注验证集，必要时微调/重训分类头。目标检测、分割和多标签分类都不是 ResNet18 此 Demo 的输出。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/12-real-vision
+python -m pip install -r requirements.txt
+python verify_vision.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>一张无标签的合成几何图；真实模型推理已验证，分类准确率及生产可用性未验证。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39351675033">GitHub Actions #39351675033</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

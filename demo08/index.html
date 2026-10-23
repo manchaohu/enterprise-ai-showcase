@@ -1,2 +1,81 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 08 · 推理服务延迟：超时与降级为什么重要？</title><meta name="description" content="把 AI 接入同步业务接口，延迟有时比生成内容本身更决定用户体验。接口超时以后，需要明确什么时候回退、改走异步或返回待处理状态，避免上游一直等待。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo08/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 08 · 双语技术导读</div><h1>推理服务延迟：超时与降级为什么重要？</h1><p class="lead">把 AI 接入同步业务接口，延迟有时比生成内容本身更决定用户体验。接口超时以后，需要明确什么时候回退、改走异步或返回待处理状态，避免上游一直等待。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>把 AI 接入同步业务接口，延迟有时比生成内容本身更决定用户体验。接口超时以后，需要明确什么时候回退、改走异步或返回待处理状态，避免上游一直等待。</p></section><section><h2>02｜核心技术与实现机制</h2><p>项目启动真正的 localhost 多线程 HTTP 服务，但它返回的是 deterministic-mock 模拟推理响应。客户端用线程池并发发请求，测量真实 HTTP 往返时间，并在服务故意延时的情况下触发超时与兜底。<div class="flow"><div class="step"><b>01</b>启动真实本地 HTTP</div><div class="step"><b>02</b>4 并发发起 12 请求</div><div class="step"><b>03</b>记录 P50/P95</div><div class="step"><b>04</b>超时后返回兜底</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>四个工作线程完成十二次设定 25ms 处理延时的 HTTP 请求，记录每次耗时并算出 P50/P95；另发一次服务器端设定 400ms 延时、客户端超时 80ms 的请求，检查返回 queued-for-later。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>项目真实运行了 HTTP 通信与超时机制，记录 completed_requests=12、concurrency=4、p50_ms、p95_ms、timeout_fallback，以及 real_llm=false。它验证集成控制链路，而非任何特定模型性能。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">GitHub Actions #39224324475</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/08-inference-latency">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/08-inference-latency
-python verify_latency.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">没有模型权重、GPU 或真实 LLM。12 个请求和模拟服务的 25ms 处理延时，不能证明生产 P95、跨地域网络时延或线上 SLO。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 08 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 08 engineering tutorial, implementation details and experiment evidence"><title>Demo 08｜推理接口的并发、超时与降级：HTTP 实测</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo08/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 08 · 在线审读</div><h1>Demo 08｜推理接口的并发、超时与降级：HTTP 实测</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/08-inference-latency">08-inference-latency</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">39224324475</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>在可控制延迟的 HTTP 服务上测量并发响应、请求超时与客户端降级。客户端提交 12 次请求，使用 4 个工作线程；成功路径模拟 25ms 处理延迟，另一次请求故意延迟 400ms，客户端超时设为 80ms，应返回 <code>queued-for-later</code>。这里使用真实 HTTP 和真实耗时测量，但“模型输出”是确定性模拟，不是 LLM 推理性能。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>服务端 <code>ThreadingHTTPServer</code> 监听临时本地端口，处理 <code>/infer</code> POST、检查输入大小和 <code>delay_ms</code>，再构造 <code>classified:</code> 响应。客户端 <code>urlopen</code> 测量耗时，捕获 <code>TimeoutError/URLError</code> 形成降级结果。测试中的 p50/p95 使用简单排序选位函数，不是带统计置信区间的性能压测。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 服务端延迟与输入限制</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/08-inference-latency/service.py"><code>service.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">size = int(self.headers.get(&quot;Content-Length&quot;,&quot;0&quot;))
+if not 0 &lt; size &lt;= 4096: raise ValueError(&quot;content length&quot;)
+delay = float(d.get(&quot;delay_ms&quot;,0))
+if not 0 &lt;= delay &lt;= 1000: raise ValueError(&quot;delay range&quot;)
+time.sleep(delay/1000)
+body = json.dumps({&quot;output&quot;:&quot;classified:&quot;+str(d[&quot;text&quot;])[:40],
+                   &quot;engine&quot;:&quot;deterministic-mock&quot;}).encode()
+</code></pre>
+<p>以 <code>delay_ms</code> 注入可重复的阻塞时间，方便区分正常和超时路径。<code>Content-Length</code> 上限降低测试接口接收超大请求的风险；模型响应中的 <code>deterministic-mock</code> 是明确证据，绝不能写作真实模型推理。线程化服务与真实 HTTP 能验证客户端的故障处理边界。</p>
+<h3>3.2 客户端超时和百分位数</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/08-inference-latency/verify_latency.py"><code>verify_latency.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">with urllib.request.urlopen(req, timeout=timeout) as resp:
+    payload = json.loads(resp.read())
+except (TimeoutError, URLError):
+    return {&quot;kind&quot;:&quot;fallback&quot;, &quot;output&quot;:&quot;queued-for-later&quot;, ...}
+# percentile(): ordered[min(n-1,max(0,int((n-1)*p)))]
+</code></pre>
+<p>客户端超时只意味着该请求端不再等待，不保证服务端任务已取消；业务操作存在重复风险时应加幂等 key。该分位数函数采用零起点下标和截断；少量样本的 p95 很容易接近尾部某个点，因此只用于演示检查，不作性能 SLO 承诺。</p>
+<h2>4. 实验结果与证据</h2>
+<p>归档 <code>HTTP_LATENCY_FALLBACK_E2E_PASS</code>：12 次成功请求、并发数 4、p50 <code>26.25ms</code>、p95 <code>27.14ms</code>；超时回退 <code>queued-for-later</code>，返回耗时 <code>80.47ms</code>。结果只对应 CI 上的小型本地模拟服务和当前一次测量。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>HTTP_LATENCY_FALLBACK_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Backend</code></td>
+  <td>real threaded HTTP, deterministic mock model</td>
+</tr>
+<tr>
+  <td><code>p50 ms</code></td>
+  <td>26.25</td>
+</tr>
+<tr>
+  <td><code>p95 ms</code></td>
+  <td>27.14</td>
+</tr>
+<tr>
+  <td><code>Timeout ms</code></td>
+  <td>80.47</td>
+</tr>
+<tr>
+  <td><code>Real LLM</code></td>
+  <td>False</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Observed milliseconds in CI</text><text x="18" y="83" fill="#274867" font-size="16">p50</text><rect x="360.0" y="67" width="114.2" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">26.25</text><text x="18" y="132" fill="#274867" font-size="16">p95</text><rect x="360.0" y="116" width="118.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">27.14</text><text x="18" y="181" fill="#274867" font-size="16">Timeout fallback</text><rect x="360.0" y="165" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">80.47</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>接入真正模型推理服务时，应把服务端 sleep 替换为推理调用，把超时层放在 API 客户端并制定取消/降级策略，记录请求 ID、模型版本和错误类型。缓存、排队、并发限流和异步结果查询可以作为后续模块。负载测试需增加分布、持续时间、并发阶梯和超时阈值。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/08-inference-latency
+# Install dependencies shown in this project README
+python verify_latency.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>没有真实模型调用、没有外部网络、没有长期压测或性能可靠性评估。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39224324475">GitHub Actions #39224324475</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

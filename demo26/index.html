@@ -1,4 +1,76 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 26 · 说话人向量：已知语音片段属于谁？</title><meta name="description" content="语音转文字回答的是“说了什么”，而多人会话还需要区分“是谁说的”。最小实验可以从已经知道每一段起止时间的语音出发，比较预训练说话人向量的相似程度。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo26/index.html" lang="en">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 26 · 双语技术导读首版</div><h1>说话人向量：已知语音片段属于谁？</h1><p class="lead">语音转文字回答的是“说了什么”，而多人会话还需要区分“是谁说的”。最小实验可以从已经知道每一段起止时间的语音出发，比较预训练说话人向量的相似程度。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜技术为什么有用</h2><p>语音转文字回答的是“说了什么”，而多人会话还需要区分“是谁说的”。最小实验可以从已经知道每一段起止时间的语音出发，比较预训练说话人向量的相似程度。</p></section><section><h2>02｜核心技术与处理流程</h2><p>使用真正的 SpeechBrain spkrec-xvect-voxceleb 预训练模型对已切分片段执行 CPU 神经推理，提取 X-vector 表征，通过余弦相似度归属已知说话人，并独立核对保存的数值。<div class="flow"><div class="step"><b>01</b>提供已知片段边界</div><div class="step"><b>02</b>真实 SpeechBrain X-vector</div><div class="step"><b>03</b>计算余弦归属</div><div class="step"><b>04</b>独立数值核验</div></div><p class="small">根据代码整理的流程图，不冒充实际模型输出。</p></p></section><section><h2>03｜真实执行的实验过程</h2><p>对三段已知边界的音频进行预训练向量推理与相似度对照，得到受限的说话人归属结果。早期 README 只有预检步骤，后续专项 E2E 已完成模型推理，两个阶段不可混淆。</p></section><section><h2>04｜已观测结果与验收证据</h2><p>专项 Actions 确认真实预训练 X-vector 和独立数值证据通过。它建立了已知片段条件下的基础说话人归属能力，不应直接标为完整、盲切分的说话人分离系统。<div class="proof"><strong>限定范围 E2E 验收通过</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">GitHub Actions #39441717044</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/26-speaker-diarization">工程源码（私有）</a></div></p></section><section><h2>05｜复现程序与运行证据</h2><p>按照工程仓库环境要求执行以下命令；公开网站并不直接运行模型。<pre><code>cd projects/26-speaker-diarization
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 26 engineering tutorial, implementation details and experiment evidence"><title>Demo 26｜说话人 X-vector：已知分段的声纹相似度与归属</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo26/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 26 · 在线审读</div><h1>Demo 26｜说话人 X-vector：已知分段的声纹相似度与归属</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/26-speaker-diarization">26-speaker-diarization</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">39441717044</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>给定三段已经知道边界的语音片段：说话人 A 的第一句、说话人 B 的一句、A 的第二句。程序用真实 SpeechBrain X-vector 模型生成每段声纹向量，把第三段与前两段分别计算余弦相似度，并分配给相似度更高的参考说话人。这里分段边界是预先给定的，不是从混合录音中自动发现。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>程序从 SpeechBrain 公共样本地址读取三条 WAV，保存原文件 SHA-256，但不在 Artifact 中再次发布录音。统一转为 16kHz 单声道并限长 6 秒；<code>EncoderClassifier.encode_batch</code> 推理提取向量，再转为 L2 单位向量。对第三段分别比较前两段，选择 A 或 B，最后组装来源、时间边界、预测 ID 和参考 ID 的时间段列表。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 规范化声纹和余弦相似度</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/26-speaker-diarization/diarize_e2e.py"><code>diarize_e2e.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">v = classifier.encode_batch(wave.unsqueeze(0)).detach().cpu().numpy()
+embeddings.append(unit(v))
+# unit(): vector / np.linalg.norm(vector)
+sims = [cosine(embeddings[2], embeddings[j]) for j in (0,1)]
+predicted = 0 if sims[0] &gt;= sims[1] else 1
+</code></pre>
+<p>声纹向量是说话人相关特征表示，不等于个人身份证明。单位化使比较忽略整体幅度，用点积衡量方向接近程度。第三段的参考标签并未直接用于 <code>predicted</code> 赋值，而是后验计算“已知分段准确率”；相同说话人在不同录音条件下可能仍有显著误差。</p>
+<h3>3.2 时间段组装与验证</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/26-speaker-diarization/diarize_e2e.py"><code>diarize_e2e.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">dur = int(wave.numel())
+label = [0,1,predicted][i]
+segments.append({&quot;start_s&quot;: audio_start/SR,
+                 &quot;end_s&quot;:(audio_start+dur)/SR,
+                 &quot;speaker_id&quot;:f&quot;SPEAKER_{label}&quot;})
+audio_start += dur
+</code></pre>
+<p><code>start_s/end_s</code> 来源于拼接既有片段的采样点数量，属于已知边界计算，而不是 VAD 自动断句。真实会议说话人分离还需 VAD、重叠声检测、说话人数估计、聚类和后处理。测试用名为 <code>speaker_accuracy_known_turns</code>，避免被误读成完整 diarization DER。</p>
+<h2>4. 实验结果与证据</h2>
+<p>独立验证 <code>verified=true</code>：三个已知片段分配正确，<code>speaker_accuracy_known_turns=1.0</code>，第三段预测 <code>SPEAKER_0</code>，余弦值已归档并复算。未上传第三方 WAV，网页只可展示衍生的相似度统计和时间线，不发布原始录音。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Verified</code></td>
+  <td>True</td>
+</tr>
+<tr>
+  <td><code>Model</code></td>
+  <td>speechbrain/spkrec-xvect-voxceleb</td>
+</tr>
+<tr>
+  <td><code>Known-turn accuracy</code></td>
+  <td>1.0</td>
+</tr>
+<tr>
+  <td><code>Segments</code></td>
+  <td>3</td>
+</tr>
+<tr>
+  <td><code>Cosine recomputed</code></td>
+  <td>True</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 180"><rect width="830" height="180" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Measured cosine similarity to reference speakers</text><text x="18" y="83" fill="#274867" font-size="16">Clip3→A</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">0.9641</text><text x="18" y="132" fill="#274867" font-size="16">Clip3→B</text><rect x="360.0" y="116" width="309.8" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">0.85344</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>可用于已切好短片段的说话人相似性判断或受控声纹特征研究。接入真实会议录音还需前置 VAD/分段、声道与采样率统一、短语音过滤、聚类阈值校准，以及个人声音数据的隐私保护和处理授权。未经额外验证不得作为生物认证或员工身份确认依据。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/26-speaker-diarization
 python -m pip install -r requirements.txt
-python preflight.py
-# Full E2E runner: see the dedicated Actions run and current source</code></pre><p class="small">私有仓库源码与 Actions 可能需要授权才能访问；本站不再分发模型权重和私人材料。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">三段音频没有覆盖未知话轮边界、重叠发言、多语言泛化或标准 Diarization Error Rate（DER）；不声明生产说话人识别准确率或底层音频的商业再分发权。</div><p>本篇定位为首版双语技术导读，尚未达到原有六篇完整图文教程的深度。后续将增加更完整的应用场景、真实结果图和逐步讲解。</p></p></section><footer>Demo 26 · 基于工程验收的双语技术导读 · <a href="../index.html">目录</a></footer></main></body></html>
+python diarize_e2e.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>三段已知说话人片段；没有盲切分、重叠声处理、多语种、跨设备鲁棒性与真实身份验证。原始声音许可仍需评估。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">GitHub Actions #39441717044</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

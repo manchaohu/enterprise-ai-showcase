@@ -1,3 +1,81 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 10 · Embedding：模型怎样把句子变成可比较的向量？</title><meta name="description" content="即使没有相同关键词，“小狗在公园奔跑”和“狗在户外跑步”也可能表达相近含义。文本 Embedding 希望让含义相近的句子在数值向量空间中更接近，为语义检索提供基础。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo10/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 10 · 双语技术导读</div><h1>Embedding：模型怎样把句子变成可比较的向量？</h1><p class="lead">即使没有相同关键词，“小狗在公园奔跑”和“狗在户外跑步”也可能表达相近含义。文本 Embedding 希望让含义相近的句子在数值向量空间中更接近，为语义检索提供基础。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>即使没有相同关键词，“小狗在公园奔跑”和“狗在户外跑步”也可能表达相近含义。文本 Embedding 希望让含义相近的句子在数值向量空间中更接近，为语义检索提供基础。</p></section><section><h2>02｜核心技术与实现机制</h2><p>使用 sentence-transformers/paraphrase-MiniLM-L3-v2 预训练神经模型，在 CPU 上对句子执行真实 PyTorch 推理，得到归一化的向量，再通过余弦相似度比较狗/小狗与数据库/SQLite 两组英语近义句。<div class="flow"><div class="step"><b>01</b>下载真实 MiniLM</div><div class="step"><b>02</b>编码四条句子</div><div class="step"><b>03</b>归一化向量</div><div class="step"><b>04</b>比较余弦分数</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>输入四条人工构造英文句子；保存向量维度、范数、相似度。验收要求输出二维且数值有限、范数接近 1、两组相关句比跨话题句更相似，并重跑首句检查稳定性。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>成功记录 PRETRAINED_EMBEDDING_CPU_E2E_PASS、模型 ID、真实神经权重加载标记和相似度对照。这是早期从 TF-IDF/SVD 检索进一步跨到真实预训练文本向量的重要工程节点。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">GitHub Actions #39271841547</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/10-real-embedding">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/10-real-embedding
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 10 engineering tutorial, implementation details and experiment evidence"><title>Demo 10｜神经文本 Embedding：句向量生成、归一化与余弦比较</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo10/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 10 · 在线审读</div><h1>Demo 10｜神经文本 Embedding：句向量生成、归一化与余弦比较</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/10-real-embedding">10-real-embedding</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">39271841547</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>将四条英文句子输入真实预训练句向量模型，输出数值向量并计算相似度。两组句子分别描述狗在公园奔跑、SQLite 数据库事务；目标是同义句得分高于跨主题组合，同时检查向量维度、范数及重复调用稳定性。该 Demo 专门验证真实神经 Embedding 的 CPU 推理链路。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p><code>SentenceTransformer</code> 加载 <code>sentence-transformers/paraphrase-MiniLM-L3-v2</code>，CPU 端一次批量编码四个字符串。<code>normalize_embeddings=True</code> 将向量归一化，结果矩阵尺寸为 <code>[4,384]</code>。因为范数接近 1，向量点积即可表示余弦相似度。对输入排列、模型版本和归一化方式有显式约束；模型 revision 请求 <code>main</code>，未固定不可变版本。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 向量生成与规范化</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/10-real-embedding/verify_embedding.py"><code>verify_embedding.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">model = SentenceTransformer(MODEL_ID, revision=&quot;main&quot;, device=&quot;cpu&quot;)
+vec = model.encode(sentences, normalize_embeddings=True,
+  convert_to_numpy=True, show_progress_bar=False)
+assert vec.ndim == 2 and vec.shape[0] == 4
+norms = np.linalg.norm(vec,axis=1)
+assert np.allclose(norms,1,atol=0.01)
+</code></pre>
+<p>归一化让文本间比较主要反映方向，而不是向量长度；<code>convert_to_numpy=True</code> 便于直接做矩阵计算。<code>atol=0.01</code> 给浮点计算容差，不能仅以范数合格证明语义质量。缓存索引或使用向量数据库时必须保存模型 ID、版本与维度，不能混用不同嵌入空间。</p>
+<h3>3.2 相似度矩阵与相对断言</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/10-real-embedding/verify_embedding.py"><code>verify_embedding.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">scores = vec @ vec.T
+assert scores[0,1] &gt; scores[0,2]
+assert scores[2,3] &gt; scores[2,0]
+again = model.encode([sentences[0]], normalize_embeddings=True,
+  convert_to_numpy=True, show_progress_bar=False)[0]
+assert np.allclose(again,vec[0],atol=1e-4)
+</code></pre>
+<p>两个不等式检查任务相关性排序是否满足预设，但不要求固定的余弦分数，避免误将某一数值当通用阈值。<code>again</code> 检查同一输入的复算稳定性。生产语义检索应使用标注检索集评价 Recall@k、nDCG，并按语种、文本长度和领域分组。</p>
+<h2>4. 实验结果与证据</h2>
+<p>证据 <code>PRETRAINED_EMBEDDING_CPU_E2E_PASS</code>，维度 <code>[4,384]</code>，四条向量范数均为 <code>1.0</code>。公园狗同义句余弦 <code>0.80843</code>，狗与数据库 <code>0.05853</code>，数据库相关句 <code>0.64442</code>，重复编码稳定。数字仅来自本次模型及输入，不代表适用于任意语料的相似度阈值。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>PRETRAINED_EMBEDDING_CPU_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Model</code></td>
+  <td>sentence-transformers/paraphrase-MiniLM-L3-v2</td>
+</tr>
+<tr>
+  <td><code>Shape</code></td>
+  <td>[4, 384]</td>
+</tr>
+<tr>
+  <td><code>Dog paraphrase</code></td>
+  <td>0.80843</td>
+</tr>
+<tr>
+  <td><code>Dog vs DB</code></td>
+  <td>0.05853</td>
+</tr>
+<tr>
+  <td><code>DB paraphrase</code></td>
+  <td>0.64442</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Archived normalized cosine values</text><text x="18" y="83" fill="#274867" font-size="16">Dog paraphrase</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">0.80843</text><text x="18" y="132" fill="#274867" font-size="16">Dog vs Database</text><rect x="360.0" y="116" width="25.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">0.05853</text><text x="18" y="181" fill="#274867" font-size="16">DB paraphrase</text><rect x="360.0" y="165" width="279.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">0.64442</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>用于知识库检索时需要分块、模型版本绑定、批量吞吐、增量索引和语言能力评估。查询和文档必须使用兼容的嵌入模型；更新权重需重新计算旧索引或设计迁移方案。Embedding 是召回阶段的表征，可结合 BM25 和 Cross-Encoder 完整部署。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/10-real-embedding
 python -m pip install -r requirements.txt
-python verify_embedding.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">四句英语不能证明大规模检索、中文语义质量、通用文本理解或生产检索召回率；权重修订使用移动 main，尚未固定不可变模型版本。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 10 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_embedding.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>四条英文构造语料；没有企业搜索评测、中文质量、领域适应或生产规模验证；模型 revision 为 <code>main</code>。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">GitHub Actions #39271841547</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

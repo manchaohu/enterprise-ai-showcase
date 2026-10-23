@@ -1,5 +1,81 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 22 · Genuine HNSW approximate-nearest-neighbor indexing</title><meta name="description" content="Exact nearest-neighbor search compares every query with a full vector set. HNSW builds a navigable proximity graph to find approximate Top-k neighbors without p"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo22/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 22 · TECHNICAL FIELD GUIDE</div><h1>Genuine HNSW approximate-nearest-neighbor indexing</h1><p class="lead">Exact nearest-neighbor search compares every query with a full vector set. HNSW builds a navigable proximity graph to find approximate Top-k neighbors without performing the same exhaustive ranking path.</p><p><a href="../index.html">← Back to all 27 demos</a></p><section><h2>01｜The problem to solve</h2><p>Exact nearest-neighbor search compares every query with a full vector set. HNSW builds a navigable proximity graph to find approximate Top-k neighbors without performing the same exhaustive ranking path.</p></section><section><h2>02｜How the technology works</h2><p>The implementation constructs a native hnswlib HNSW graph index with cosine distance and integer IDs. NumPy exact cosine Top-10 acts as a reference; the independent verifier reloads the saved index and checks resulting IDs, distances and Recall@10.<div class="flow"><div class="step"><b>01</b>Index 2,048 vectors</div><div class="step"><b>02</b>Build native HNSW</div><div class="step"><b>03</b>Run 36 Top-10 queries</div><div class="step"><b>04</b>Compare to exact cosine</div></div><p class="small">A schematic of the implementation steps, not an actual model output plot.</p></p></section><section><h2>03｜Actual experiment inputs</h2><p>2,048 seeded normalized 48-dimensional synthetic numeric vectors form the corpus. The program executes 36 perturbed queries and saves the native index binary, source vectors, query IDs and per-query results.</p></section><section><h2>04｜Observed result and independent evidence</h2><p>Mean Recall@10 was 1.0 across 36 synthetic queries; eight tests, actual index construction, binary serialization/reloading and independent replay passed. This is a small constructed-vector result.<div class="proof"><strong>Scope-bounded E2E PASS</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">GitHub Actions #39390293809</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/22-hnsw-ann">Engineering source (private)</a></div></p></section><section><h2>05｜Reproduce from the repository</h2><p>Run this reference command in the documented engineering environment.<pre><code>cd projects/22-hnsw-ann
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 22 engineering tutorial, implementation details and experiment evidence"><title>Demo 22｜HNSW nearest neighbor index: recall and persistence</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo22/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 22 · ONLINE REVIEW</div><h1>Demo 22｜HNSW nearest neighbor index: recall and persistence</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/22-hnsw-ann">22-hnsw-ann</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">39390293809</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Index 2,048 synthetic 48-dimensional vectors in real hnswlib, issue 36 Top10 cosine queries, compare with exact brute-force nearest neighbors, and save/reload the binary index. This demonstrates ANN mechanics rather than neural embedding generation.</p>
+<h2>2. Technical design and data flow</h2>
+<p>Seed 20261020 produces normalized corpus and perturbed queries. HNSW builds with M=16 and ef_construction=120, searches with ef_search=100, and inserts with one thread. Build/query/exact-scan timing is recorded. Reloading the index requires resetting ef_search because it is not persisted.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Construct HNSW cosine index</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/22-hnsw-ann/hnsw_e2e.py"><code>hnsw_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">index = hnswlib.Index(space=&quot;cosine&quot;, dim=DIM)
+index.init_index(max_elements=COUNT,
+  ef_construction=EF_CONSTRUCTION,M=M,random_seed=17)
+index.add_items(corpus, ids, num_threads=1)
+index.set_ef(EF)
+ann_ids, ann_distances = index.knn_query(queries,k=K,num_threads=1)
+</code></pre>
+<p>M controls graph connectivity, ef_construction affects build quality/cost, and ef_search trades search effort for recall/latency. The cosine space returns distance rather than similarity. Single-thread insertion improves reproducibility but is not a throughput benchmark.</p>
+<h3>3.2 Exact baseline and persistence check</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/22-hnsw-ann/hnsw_e2e.py"><code>hnsw_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">exact = np.argsort(-(queries @ corpus.T),axis=1,kind=&quot;stable&quot;)[:,:K]
+index.save_index(str(index_path))
+reloaded.load_index(str(index_path),max_elements=COUNT)
+reloaded.set_ef(EF)
+after_ids, after_distances = reloaded.knn_query(queries,k=K,num_threads=1)
+assert np.array_equal(ann_ids,after_ids)
+</code></pre>
+<p>The exact baseline ranks all corpus vectors and computes overlap/10 per query. SHA-256 ties evidence to vector and index files. Reload checks query equivalence, not cross-version binary compatibility or dynamic update correctness.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Independent verification reports <code>DEMO_SCOPE_PASS</code>, mean/min Recall@10 of 1.0 over 36 queries. Observed exact scan 3.533ms, HNSW build 87.176ms and HNSW query phase 1.655ms for the tested queries. These one-run, small-set timings are not million-vector benchmarks.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Verifier status</code></td>
+  <td>DEMO_SCOPE_PASS</td>
+</tr>
+<tr>
+  <td><code>Corpus vectors</code></td>
+  <td>2048</td>
+</tr>
+<tr>
+  <td><code>Dimension</code></td>
+  <td>48</td>
+</tr>
+<tr>
+  <td><code>Queries</code></td>
+  <td>36</td>
+</tr>
+<tr>
+  <td><code>Recall@10 mean/min</code></td>
+  <td>1.0/1.0</td>
+</tr>
+<tr>
+  <td><code>HNSW query ms</code></td>
+  <td>1.655163</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">One-run elapsed milliseconds (different operations)</text><text x="18" y="83" fill="#274867" font-size="16">Exact scan</text><rect x="360.0" y="67" width="14.2" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">3.5329</text><text x="18" y="132" fill="#274867" font-size="16">HNSW build</text><rect x="360.0" y="116" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">87.176</text><text x="18" y="181" fill="#274867" font-size="16">HNSW query</text><rect x="360.0" y="165" width="6.6" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">1.6552</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>Use in semantic/image similarity retrieval as the neighbor index behind an embedding generator. Add access filtering, index mutation, model-version migration and recovery. Benchmark M/ef settings and realistic distributions before choosing recall/latency targets.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/22-hnsw-ann
 python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
 python hnsw_e2e.py
-python verify_evidence.py</code></pre><p class="small">Source and Actions may require private-repository access; this public lesson contains no redistributed model weights or private data.</p></p></section><section><h2>06｜What cannot be concluded</h2><p><div class="note">No pretrained text embeddings, large-scale latency benchmark or real enterprise vector distribution was assessed. Recall@10=1.0 on a synthetic fixture is not universal search quality.</div><p>This is a first bilingual technical orientation. It is not yet as deeply illustrated as the six established full lessons; future iterations will enrich it with verified charts and practical scenarios.</p></p></section><footer>Demo 22 · Evidence-linked bilingual engineering guide · <a href="../index.html">All demos</a></footer></main></body></html>
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>Only 2,048 synthetic vectors and 36 queries; no million-scale, live updates, access filtering or concurrency benchmark.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39390293809">GitHub Actions #39390293809</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

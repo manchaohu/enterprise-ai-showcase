@@ -1,4 +1,76 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 26 · Speaker embeddings: attribution with known speech segments</title><meta name="description" content="ASR asks what was spoken; multi-speaker systems additionally need to distinguish who spoke. A bounded experiment can start with known segment boundaries and com"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo26/index.html" lang="zh-CN">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 26 · TECHNICAL FIELD GUIDE</div><h1>Speaker embeddings: attribution with known speech segments</h1><p class="lead">ASR asks what was spoken; multi-speaker systems additionally need to distinguish who spoke. A bounded experiment can start with known segment boundaries and compare pretrained speaker embeddings, without attempting blind meeting segmentation.</p><p><a href="../index.html">← Back to all 27 demos</a></p><section><h2>01｜The problem to solve</h2><p>ASR asks what was spoken; multi-speaker systems additionally need to distinguish who spoke. A bounded experiment can start with known segment boundaries and compare pretrained speaker embeddings, without attempting blind meeting segmentation.</p></section><section><h2>02｜How the technology works</h2><p>The genuine SpeechBrain spkrec-xvect-voxceleb pretrained model runs CPU inference on presegmented speech to derive X-vectors. Cosine similarity supports known-speaker attribution, and a separate verifier checks saved numeric evidence.<div class="flow"><div class="step"><b>01</b>Provide known boundaries</div><div class="step"><b>02</b>Run pretrained X-vectors</div><div class="step"><b>03</b>Cosine speaker matching</div><div class="step"><b>04</b>Independent numeric audit</div></div><p class="small">A schematic of the implementation steps, not an actual model output plot.</p></p></section><section><h2>03｜Actual experiment inputs</h2><p>Three recordings with known speech boundaries are embedded and compared. Earlier documentation described model-availability preflight only; the later successful dedicated E2E executed actual pretrained embedding inference, a distinct stage.</p></section><section><h2>04｜Observed result and independent evidence</h2><p>The dedicated Actions run verified genuine pretrained X-vector computation and numerical output checks. The result supports known-segment attribution, not unconstrained diarization of arbitrary multi-speaker recordings.<div class="proof"><strong>Scope-bounded E2E PASS</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">GitHub Actions #39441717044</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/26-speaker-diarization">Engineering source (private)</a></div></p></section><section><h2>05｜Reproduce from the repository</h2><p>Run this reference command in the documented engineering environment.<pre><code>cd projects/26-speaker-diarization
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 26 engineering tutorial, implementation details and experiment evidence"><title>Demo 26｜Speaker X-vectors: known-turn similarity and identity assignment</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo26/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 26 · ONLINE REVIEW</div><h1>Demo 26｜Speaker X-vectors: known-turn similarity and identity assignment</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/26-speaker-diarization">26-speaker-diarization</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">39441717044</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Given three pre-segmented speech clips (A, B and another from A), compute pretrained SpeechBrain X-vectors and compare the third clip with the two references by cosine similarity. The predicted speaker ID comes from the higher similarity. Turn boundaries are known beforehand; blind diarization is not performed.</p>
+<h2>2. Technical design and data flow</h2>
+<p>Three public SpeechBrain clips are fetched and hashed without redistributing source audio in the artifact. Audio becomes mono 16kHz and is capped at six seconds. A pretrained EncoderClassifier creates speaker vectors, normalized for cosine comparison. The final timeline uses known clip boundaries plus the predicted identity for the third clip.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Normalize speaker vectors</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/26-speaker-diarization/diarize_e2e.py"><code>diarize_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">v = classifier.encode_batch(wave.unsqueeze(0)).detach().cpu().numpy()
+embeddings.append(unit(v))
+# unit(): vector / np.linalg.norm(vector)
+sims = [cosine(embeddings[2], embeddings[j]) for j in (0,1)]
+predicted = 0 if sims[0] &gt;= sims[1] else 1
+</code></pre>
+<p>X-vectors represent speaker-related acoustics, not authenticated human identity. Unit vectors make cosine comparison independent of magnitude. The known third-clip label is only evaluated afterward; it does not force <code>predicted</code>. Recording/channel mismatch can strongly affect similarity.</p>
+<h3>3.2 Build known-turn timeline</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/26-speaker-diarization/diarize_e2e.py"><code>diarize_e2e.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">dur = int(wave.numel())
+label = [0,1,predicted][i]
+segments.append({&quot;start_s&quot;: audio_start/SR,
+                 &quot;end_s&quot;:(audio_start+dur)/SR,
+                 &quot;speaker_id&quot;:f&quot;SPEAKER_{label}&quot;})
+audio_start += dur
+</code></pre>
+<p>Timestamps are computed from concatenated known clip durations, not detected by VAD. Full diarization additionally needs segmentation, overlap handling, speaker-count estimation, clustering and DER evaluation. The metric name explicitly says known turns.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Independent verification reports three correct known turns (accuracy 1.0), with the third assigned <code>SPEAKER_0</code>. Cosine scores are stored and independently recomputed. Original third-party WAV recordings are not published; online visuals show derived scores and known-turn timing only.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Verified</code></td>
+  <td>True</td>
+</tr>
+<tr>
+  <td><code>Model</code></td>
+  <td>speechbrain/spkrec-xvect-voxceleb</td>
+</tr>
+<tr>
+  <td><code>Known-turn accuracy</code></td>
+  <td>1.0</td>
+</tr>
+<tr>
+  <td><code>Segments</code></td>
+  <td>3</td>
+</tr>
+<tr>
+  <td><code>Cosine recomputed</code></td>
+  <td>True</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 180"><rect width="830" height="180" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Measured cosine similarity to reference speakers</text><text x="18" y="83" fill="#274867" font-size="16">Clip3→A</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">0.9641</text><text x="18" y="132" fill="#274867" font-size="16">Clip3→B</text><rect x="360.0" y="116" width="309.8" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">0.85344</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>Use for controlled speaker-vector similarity on presegmented audio. Meeting diarization needs VAD, segmentation, clustering thresholds, overlap handling and speaker privacy controls. This is not biometric authentication or employee identification.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/26-speaker-diarization
 python -m pip install -r requirements.txt
-python preflight.py
-# Full E2E runner: see the dedicated Actions run and current source</code></pre><p class="small">Source and Actions may require private-repository access; this public lesson contains no redistributed model weights or private data.</p></p></section><section><h2>06｜What cannot be concluded</h2><p><div class="note">Three known-boundary samples do not evaluate blind turn segmentation, overlapping speakers, multilingual generalization, diarization error rate (DER) or production speaker accuracy and media redistribution rights.</div><p>This is a first bilingual technical orientation. It is not yet as deeply illustrated as the six established full lessons; future iterations will enrich it with verified charts and practical scenarios.</p></p></section><footer>Demo 26 · Evidence-linked bilingual engineering guide · <a href="../index.html">All demos</a></footer></main></body></html>
+python diarize_e2e.py
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>Three known turns; no blind segmentation, overlap handling, multilingual robustness, channel mismatch evaluation or identity verification. Source audio rights require separate assessment.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39441717044">GitHub Actions #39441717044</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

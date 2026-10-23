@@ -1,3 +1,75 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 09 · 多模态之前：PNG 像素与 WAV 信号怎么处理？</title><meta name="description" content="视觉或语音模型收到的是可解码的像素和声音采样，而不只是图片、声音的文件名。解析错误会让后续模型得到错误输入，因此需要先验证基本图像尺寸、颜色区域、音频时长与频谱。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><strong>中文</strong><a href="../en/demo09/index.html">English</a></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 09 · 双语技术导读</div><h1>多模态之前：PNG 像素与 WAV 信号怎么处理？</h1><p class="lead">视觉或语音模型收到的是可解码的像素和声音采样，而不只是图片、声音的文件名。解析错误会让后续模型得到错误输入，因此需要先验证基本图像尺寸、颜色区域、音频时长与频谱。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p><section><h2>01｜这项技术要解决什么问题</h2><p>视觉或语音模型收到的是可解码的像素和声音采样，而不只是图片、声音的文件名。解析错误会让后续模型得到错误输入，因此需要先验证基本图像尺寸、颜色区域、音频时长与频谱。</p></section><section><h2>02｜核心技术与实现机制</h2><p>Pillow 真正写入并读取 PNG，NumPy 创建已知频率的正弦声音，Python wave 生成 16 kHz PCM WAV，另通过 NumPy FFT 重新测量频谱峰值、采样率、时长和 RMS。这里执行的是信号算法，不是预训练 AI 模型。<div class="flow"><div class="step"><b>01</b>构造 PNG/WAV</div><div class="step"><b>02</b>从磁盘重新解码</div><div class="step"><b>03</b>像素与 FFT 分析</div><div class="step"><b>04</b>核对数值与格式</div></div><p class="small">流程示意，非真实模型输出曲线。</p></p></section><section><h2>03｜实际实验输入与执行过程</h2><p>先构造 120×80 PNG、其中固定红色区域 2400 像素；再生成 16kHz、1 秒、440Hz 的单声道 WAV。程序从磁盘重新读回两份文件，验证区域像素数、声波频率、时长与 RMS。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真实文件处理脚本成功，并输出 PNG/WAV 两种样本与 IMAGE_AUDIO_SIGNAL_E2E_PASS 的 JSON 证据。所有样本由程序构造，标记 synthetic_fixtures=true、real_vision_model=false、real_speech_recognition=false。<div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39262917950">GitHub Actions #39262917950</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/09-multimodal-media">私有工程源码</a></div></p></section><section><h2>05｜实验复现与证据来源</h2><p>从仓库根目录执行，实际还需满足依赖环境。<pre><code>cd projects/09-multimodal-media
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 09 engineering tutorial, implementation details and experiment evidence"><title>Demo 09｜图像与音频信号处理：像素统计、FFT 与 WAV 检查</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo09/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 09 · 在线审读</div><h1>Demo 09｜图像与音频信号处理：像素统计、FFT 与 WAV 检查</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/09-multimodal-media">09-multimodal-media</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39262917950">39262917950</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>将 PNG 图片和 WAV PCM16 作为真实文件打开并计算基础统计，为后续视觉分类、音频识别或实时交互建立预处理能力。测试程序生成一张 120×80 彩色图，以及一段 16kHz、1 秒、440Hz 正弦波；验证尺寸、红色像素数、RMS 和频谱峰值。该模块没有视觉模型或语音识别模型。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p>图片经 Pillow 解码并转换 RGB 数组，计算逐通道均值和满足阈值条件的红色像素数。音频经 wave 读取并检查单声道 16-bit 格式，再归一化为 [-1,1]，用 <code>np.fft.rfft</code> 找最高非零频率能量 bin，同时计算波形 RMS。测试由公式构造输入，归档保存 PNG/WAV 和数值证据。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 图像颜色特征</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/09-multimodal-media/media_pipeline.py"><code>media_pipeline.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">pixels = rgb.reshape(-1, 3)
+means = pixels.mean(axis=0)
+red_pixels = int(np.sum((pixels[:,0]&gt;180) &amp;
+    (pixels[:,0]&gt;pixels[:,1]*1.4) &amp;
+    (pixels[:,0]&gt;pixels[:,2]*1.4)))
+</code></pre>
+<p><code>reshape(-1,3)</code> 让每行对应一个 RGB 像素，均值是整图颜色统计。红色规则要求 R 超过固定亮度阈值且显著高于 G/B，它只是针对已知色块的手写像素过滤器，既不能替代目标检测也不能处理复杂光照下的语义“红色物体”。</p>
+<h3>3.2 FFT 峰值与 RMS</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/09-multimodal-media/media_pipeline.py"><code>media_pipeline.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">data = np.frombuffer(handle.readframes(handle.getnframes()), dtype=&quot;&lt;i2&quot;)
+signal = data.astype(np.float64) / 32768
+spectrum = np.abs(np.fft.rfft(signal))
+freqs = np.fft.rfftfreq(len(signal), 1/rate)
+peak = int(np.argmax(spectrum[1:]) + 1)
+</code></pre>
+<p><code>&lt;i2</code> 表示小端有符号 16 位样本，除以 32768 转成浮点幅度。<code>rfft</code> 仅处理实信号非冗余正频谱，故排除索引 0 的直流分量。最大峰只能识别主导频率，无法识别语音内容；噪声、多声源和窗函数泄漏需要更复杂的谱分析。</p>
+<h2>4. 实验结果与证据</h2>
+<p>归档 <code>IMAGE_AUDIO_SIGNAL_E2E_PASS</code>：PNG 为 <code>120×80</code>，R/G/B 均值 <code>[75,25,32.5]</code>，红色像素 <code>2400</code>；WAV 为 16kHz、1 秒，频谱峰值 <code>440Hz</code>，RMS <code>0.35353</code>。原始 PNG/WAV 均来自程序合成而非第三方媒体素材。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>IMAGE_AUDIO_SIGNAL_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Image</code></td>
+  <td>120×80</td>
+</tr>
+<tr>
+  <td><code>Red pixels</code></td>
+  <td>2400</td>
+</tr>
+<tr>
+  <td><code>WAV peak Hz</code></td>
+  <td>440.0</td>
+</tr>
+<tr>
+  <td><code>WAV RMS</code></td>
+  <td>0.35353</td>
+</tr>
+</tbody>
+</table>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAABQCAIAAABd+SbeAAAA6klEQVR4nO3bsQ3CQBAAQYxcwseOCOi/HiLHLoIijOdlsZO//rS69JaxvR+53nP2AP+i0EihkUIjhUYKjRQaKTRSaGQ98/hz7L+ag3mNbcq/bTRSaKTQSKGRQiOFRgqNFBopNFJopNBIoZFCI4VGCo0UGik0Umik0EihkUIjhUYKjRQaKTRSaKTQSKGRQiOFRgqNFBopNFJopNBIoZFCI4VGCo2cujOcdbN3R200Umik0EihkUIjhUYKjRQaKTRSaKTQSKGRQiOFRgqNFBopNFJopNBIoZFCI4VGCo0UGik0Umik0EihkUIjX9etBFTVwFxOAAAAAElFTkSuQmCC" alt="归档的程序生成输入图像或帧接触图（非真实场景样本）" />
+<em>归档的程序生成输入图像或帧接触图（非真实场景样本）</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>作为多模态接入层，可预检查像素格式、采样率、声道与信号是否为空，再将标准化数据交给 VLM/ASR 等真实模型。后续需要解决大文件流式读取、重采样、时间对齐以及隐私、解码器安全和媒体文件恶意载荷。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/09-multimodal-media
 python -m pip install -r requirements.txt
-python verify_media.py</code></pre><p class="small">私有源码链接可能需要授权；本站不再分发模型权重或第三方原始素材。</p></p></section><section><h2>06｜能力边界与后续深化</h2><p><div class="note">不能推断 OCR、图像语义、自动转写、声源定位或真实噪声下的效果。这项技术是后续多模态工程的前处理基础，不是模型理解能力验证。</div><p>本篇是首版双语技术导读，后续再补真实结果图和展开案例；暂不视为与前六篇同等深度的图文教程。</p></p></section><footer>Demo 09 · 基于真实工程验收证据的双语技术导读 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_media.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>仅处理构造的标准文件；没有实际图像语义识别、声纹、说话人分离或语音转写。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39262917950">GitHub Actions #39262917950</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

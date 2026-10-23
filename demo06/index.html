@@ -1,2 +1,72 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 06 · Agent 审批：什么情况下允许 AI 修改工单？</title><meta name="description" content="如果 Agent 能关闭工单或写入数据库，就必须在真正执行前验证是否获得授权，而且批准必须与操作类型、目标工单和参数绑定，不能批准一次之后随意替换对象。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo06/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 06 · 技术导读首版</div><h1>Agent 审批：什么情况下允许 AI 修改工单？</h1><p class="lead">如果 Agent 能关闭工单或写入数据库，就必须在真正执行前验证是否获得授权，而且批准必须与操作类型、目标工单和参数绑定，不能批准一次之后随意替换对象。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>如果 Agent 能关闭工单或写入数据库，就必须在真正执行前验证是否获得授权，而且批准必须与操作类型、目标工单和参数绑定，不能批准一次之后随意替换对象。</p></section><section><h2>02｜核心技术与实现机制</h2><p>该实验复用真正的 SQLite TicketStore 和应用内 ApprovalGate，检查无审批拒绝、请求者不能自批、未批准不能执行、变更参数使审批无效以及审批只能使用一次。执行后保存允许、拒绝与审计事件。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>Agent 提出写操作</div><div class="step"><b>02</b>绑定工具与参数</div><div class="step"><b>03</b>模拟审批角色决策</div><div class="step"><b>04</b>SQLite 执行并审计</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>构造一条待关闭工单，先验证多种未经批准的操作不会改变状态。测试程序中的 reviewer 角色批准正确的 close_ticket 参数后，agent 方可写入 closed；重复消费同一许可则被拒绝。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>真实工单关闭、审批前零变更、一次性许可和审计序列得到验证；独立结果 JSON 记录 APPROVED、EXECUTED 与 DENIED 事件。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39214083969" target="_blank" rel="noopener noreferrer">GitHub Actions #39214083969</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/06-agent-approval" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>cd projects/06-agent-approval
-python verify_approval.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">审批人只是程序模拟的角色，没有真实用户认证、签名、外部 MCP 传输或并发安全验证；这不是可以直接上线的安全审批产品。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 06 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 06 engineering tutorial, implementation details and experiment evidence"><title>Demo 06｜Agent 工单审批：请求、批准、一次性消费与审计</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo06/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 06 · 在线审读</div><h1>Demo 06｜Agent 工单审批：请求、批准、一次性消费与审计</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/06-agent-approval">06-agent-approval</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39214083969">39214083969</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>为关闭工单这类有业务副作用的工具建立审批闸门。Agent 可以申请关闭指定工单，只有 <code>reviewer</code> 身份在程序层批准后，Agent 才可用同一个审批 ID 和原始参数执行一次操作。实验还测试工具白名单、参数绑定、重复消费、未经审批和错误调用身份被拒绝。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p><code>ApprovalGate</code> 使用自己的 SQLite approvals 与 audit 表，同时调用 Demo 01 的 <code>TicketStore</code> 更新工单。审批记录包含 requester、tool、序列化的 args_json 和 state；执行时使用单条条件 UPDATE 从 <code>approved</code> 变为 <code>consumed</code>，同时绑定审批 ID、工具名和参数，从而防止审批被转用于其他工单。身份只是测试中传入的字符串，不是受信任登录体系。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 申请时限制工具和参数</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/06-agent-approval/approval_gate.py"><code>approval_gate.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">if actor != &quot;agent&quot; or tool != &quot;close_ticket&quot; or set(args)!={&quot;ticket_id&quot;}:
+    self.record(actor,&quot;DENIED&quot;,None,&quot;not permitted for approval&quot;)
+    raise PermissionError(&quot;not permitted&quot;)
+arguments = json.dumps(args, sort_keys=True)
+</code></pre>
+<p>申请只允许 <code>close_ticket(ticket_id)</code>，其余工具立即拒绝，审计记录事件。<code>sort_keys=True</code> 保证同样 JSON 参数使用稳定序列化，便于后续字节串匹配；真正企业系统还需要类型校验和身份来源可信性。</p>
+<h3>3.2 一次性消费与审计边界</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/06-agent-approval/approval_gate.py"><code>approval_gate.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">db.execute(&quot;BEGIN IMMEDIATE&quot;)
+cursor = db.execute(&quot;&quot;&quot;UPDATE approvals SET state='consumed'
+ WHERE id=? AND requester=? AND tool=? AND args_json=? AND state='approved'&quot;&quot;&quot;,
+ (approval_id,actor,tool,arguments))
+if cursor.rowcount!=1:
+    db.rollback()
+    raise PermissionError(&quot;no matching active approval&quot;)
+</code></pre>
+<p>条件更新与事务绑定，能防止同一审批在已消费后第二次通过。此 Demo 先在审批库提交 <code>consumed</code>，随后才调用另一份 SQLite 中的工单关闭操作；跨两个数据库不是一个原子事务。若关闭执行失败，审批可能已经消费，业务需要补偿机制或统一事务/Outbox 设计。</p>
+<h2>4. 实验结果与证据</h2>
+<p>原始证据 <code>AGENT_APPROVAL_SQLITE_E2E_PASS</code>：单一工单在批准后关闭，记录 <code>APPROVED</code> 与 <code>EXECUTED</code> 各一次，并出现多项 <code>DENIED</code>；同一审批 ID 无法重复使用，参数改为其他 ticket_id 会被拒绝。该 Demo 不涉及真实 LLM 决策或浏览器中的真实人工审批。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>AGENT_APPROVAL_SQLITE_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Approval one-time</code></td>
+  <td>True</td>
+</tr>
+<tr>
+  <td><code>Audit events</code></td>
+  <td>DENIED, REQUESTED, DENIED, DENIED, APPROVED, DENIED, EXECUTED, DENIED, DENIED</td>
+</tr>
+<tr>
+  <td><code>Ticket count</code></td>
+  <td>1</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 276"><rect width="830" height="276" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Actual count of recorded approval events</text><text x="18" y="83" fill="#274867" font-size="16">DENIED</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">6</text><text x="18" y="132" fill="#274867" font-size="16">REQUESTED</text><rect x="360.0" y="116" width="58.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">1</text><text x="18" y="181" fill="#274867" font-size="16">APPROVED</text><rect x="360.0" y="165" width="58.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">1</text><text x="18" y="230" fill="#274867" font-size="16">EXECUTED</text><rect x="360.0" y="214" width="58.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="232" fill="#203a55" font-size="15">1</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>工程接入时把 <code>actor</code> 改为可信认证主体，审批界面记录 reviewer 身份和有效期限；对高风险操作增加双人复核、会话不可抵赖性和失败后的补偿。执行阶段要重新核查资源权限，避免仅凭历史申请判定当前可执行。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/06-agent-approval
+# Install dependencies shown in this project README
+python verify_approval.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>没有真实身份认证、人类审批 UI、跨数据库原子事务、网络威胁模型，也没有 MCP 通信验证。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39214083969">GitHub Actions #39214083969</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>

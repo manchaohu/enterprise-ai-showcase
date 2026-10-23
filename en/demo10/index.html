@@ -1,3 +1,81 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 10 · Real pretrained text embeddings and cosine similarity</title><meta name="description" content="Two sentences can mean nearly the same thing without sharing exact wording. Text embedding models map sentences to vectors so similarity comparisons can reflect"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo10/index.html">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 10 · TECHNICAL FIELD GUIDE</div><h1>Real pretrained text embeddings and cosine similarity</h1><p class="lead">Two sentences can mean nearly the same thing without sharing exact wording. Text embedding models map sentences to vectors so similarity comparisons can reflect learned semantic patterns.</p><p><a href="../index.html">← All 27 demos</a></p><section><h2>01｜The practical question</h2><p>Two sentences can mean nearly the same thing without sharing exact wording. Text embedding models map sentences to vectors so similarity comparisons can reflect learned semantic patterns.</p></section><section><h2>02｜How the system works</h2><p>The genuine pretrained sentence-transformers/paraphrase-MiniLM-L3-v2 network runs on CPU and encodes sentences into normalized numerical embeddings. Cosine similarity compares two dog/puppy variants and two database/SQLite transaction variants.<div class="flow"><div class="step"><b>01</b>Load pretrained MiniLM</div><div class="step"><b>02</b>Encode four sentences</div><div class="step"><b>03</b>Normalize vectors</div><div class="step"><b>04</b>Compare cosine scores</div></div><p class="small">An explanatory process diagram, not model-measured output.</p></p></section><section><h2>03｜Experiment inputs and execution</h2><p>Four synthetic English sentences are encoded. The verifier checks vector shape, finite values, normalized norms, semantically related pairs exceeding cross-topic similarity and repeat encoding stability for the first sentence.</p></section><section><h2>04｜What acceptance actually observed</h2><p>The verified run recorded PRETRAINED_EMBEDDING_CPU_E2E_PASS, actual model identity, pretrained weight loading, vector dimensions and similarity comparisons—distinct from the non-neural TF-IDF/SVD vectors in Demo 04.<div class="proof"><strong>Bounded verification</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">GitHub Actions #39271841547</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/10-real-embedding">Source (private repo)</a></div></p></section><section><h2>05｜How to reproduce</h2><p>Reference command from the repository root; environment dependencies vary.<pre><code>cd projects/10-real-embedding
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 10 engineering tutorial, implementation details and experiment evidence"><title>Demo 10｜Neural text embeddings: normalized vectors and cosine comparisons</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">English catalog</a><a lang="zh-CN" href="../../demo10/index.html">中文</a><strong>English</strong></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 10 · ONLINE REVIEW</div><h1>Demo 10｜Neural text embeddings: normalized vectors and cosine comparisons</h1>
+<blockquote>
+<p>Online review draft (pending article-level approval) · linked implementation is in a private repository · evidence is scope-bounded</p>
+</blockquote>
+<p><strong>Source (restricted)</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/10-real-embedding">10-real-embedding</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">39271841547</a></p>
+<h2>1. Requirements and acceptance</h2>
+<p>Encode four English sentences with an actual pretrained sentence-transformer, compare same-topic paraphrases with unrelated text, and verify vector shape, L2 norm and repeatability. This demonstrates real neural embeddings on CPU rather than the TF-IDF/SVD latent vectors used in Demo 04.</p>
+<h2>2. Technical design and data flow</h2>
+<p><code>SentenceTransformer</code> runs the paraphrase-MiniLM-L3-v2 checkpoint on CPU, encoding four texts as a [4,384] matrix. With normalized embeddings, the vector dot product yields cosine similarity. Input ordering and normalization are part of the contract. The model revision requests moving <code>main</code> rather than an immutable commit.</p>
+<h2>3. Core code and implementation details</h2>
+<h3>3.1 Encode and normalize</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/10-real-embedding/verify_embedding.py"><code>verify_embedding.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">model = SentenceTransformer(MODEL_ID, revision=&quot;main&quot;, device=&quot;cpu&quot;)
+vec = model.encode(sentences, normalize_embeddings=True,
+  convert_to_numpy=True, show_progress_bar=False)
+assert vec.ndim == 2 and vec.shape[0] == 4
+norms = np.linalg.norm(vec,axis=1)
+assert np.allclose(norms,1,atol=0.01)
+</code></pre>
+<p>Normalization turns vector similarity into an angular comparison. NumPy output supports direct matrix arithmetic. The 0.01 tolerance permits floating-point error but does not establish semantic quality. Persist model identity, version and dimension with any vector index.</p>
+<h3>3.2 Cosine matrix and checks</h3>
+<p><strong>Source</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/10-real-embedding/verify_embedding.py"><code>verify_embedding.py</code></a> — Selected excerpt, surrounding context omitted; not standalone executable</p>
+<pre><code class="language-python">scores = vec @ vec.T
+assert scores[0,1] &gt; scores[0,2]
+assert scores[2,3] &gt; scores[2,0]
+again = model.encode([sentences[0]], normalize_embeddings=True,
+  convert_to_numpy=True, show_progress_bar=False)[0]
+assert np.allclose(again,vec[0],atol=1e-4)
+</code></pre>
+<p>Two inequalities test relative similarity without hardcoding score thresholds; the repeated encoding checks numerical stability. Real retrieval quality needs relevance-labeled Recall@k, nDCG and per-domain evaluation, not just two constructed contrasts.</p>
+<h2>4. Observed results and evidence</h2>
+<p>Archived <code>PRETRAINED_EMBEDDING_CPU_E2E_PASS</code>: shape [4,384], all norms 1.0. Dog paraphrase cosine 0.80843, dog-vs-database 0.05853, database paraphrase 0.64442. Repeated encoding was stable. These are example scores, not universal similarity thresholds.</p>
+<table>
+<thead>
+<tr>
+  <th>Evidence field</th>
+  <th>Archived value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>PRETRAINED_EMBEDDING_CPU_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Model</code></td>
+  <td>sentence-transformers/paraphrase-MiniLM-L3-v2</td>
+</tr>
+<tr>
+  <td><code>Shape</code></td>
+  <td>[4, 384]</td>
+</tr>
+<tr>
+  <td><code>Dog paraphrase</code></td>
+  <td>0.80843</td>
+</tr>
+<tr>
+  <td><code>Dog vs DB</code></td>
+  <td>0.05853</td>
+</tr>
+<tr>
+  <td><code>DB paraphrase</code></td>
+  <td>0.64442</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 227"><rect width="830" height="227" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Archived normalized cosine values</text><text x="18" y="83" fill="#274867" font-size="16">Dog paraphrase</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">0.80843</text><text x="18" y="132" fill="#274867" font-size="16">Dog vs Database</text><rect x="360.0" y="116" width="25.3" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">0.05853</text><text x="18" y="181" fill="#274867" font-size="16">DB paraphrase</text><rect x="360.0" y="165" width="279.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">0.64442</text></svg>
+<em>Comparison derived from archived evidence; see metric definitions</em></p>
+<h2>5. Integration and operational use</h2>
+<p>In retrieval, add chunking, model-version pinning, throughput monitoring and index refresh. Query and document embeddings must share a compatible vector space; changing weights usually requires re-embedding. Neural vectors may complement BM25 and a separate reranker.</p>
+<p><strong>Reproduction (private repository)</strong></p>
+<pre><code class="language-bash">cd projects/10-real-embedding
 python -m pip install -r requirements.txt
-python verify_embedding.py</code></pre><p class="small">The linked source may require private repository permission; no model weights or third-party originals are republished here.</p></p></section><section><h2>06｜Limits and future deepening</h2><p><div class="note">Four English examples do not establish production retrieval recall, Chinese quality, broad semantic capability or latency targets. The requested model revision remains a moving main rather than an immutable commit.</div><p>A bilingual technical orientation, not yet a fully illustrated tutorial. Future versions will add verified visual evidence and worked examples.</p></p></section><footer>Demo 10 · Engineering-evidence-linked field guide · <a href="../index.html">Catalogue</a></footer></main></body></html>
+python verify_embedding.py
+</code></pre>
+<h2>6. Limits of validation</h2>
+<p>Four English examples only; no enterprise retrieval benchmark, Chinese quality validation, domain adaptation or production load test. The requested revision is <code>main</code>.</p>
+<p><strong>Evidence provenance:</strong> <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39271841547">GitHub Actions #39271841547</a>。Raw artifacts are held in the private research library; restricted or third-party media files are not republished.</p>
+</main><footer>Based on actual code and archived evidence; article review pending</footer></body></html>

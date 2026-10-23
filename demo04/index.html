@@ -1,3 +1,72 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 04 · 混合检索：关键词和潜在向量怎样互补？</title><meta name="description" content="只按关键词找资料容易漏掉近义表达；只按一种向量相似度排序又可能遗漏精确标识符。一个实用检索管道可以保留两种排序信号，再融合和重新排序。"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang" aria-label="Language"><strong>中文</strong><a href="../en/demo04/index.html" lang="en">English</a></nav><header><div class="meta">ENTERPRISE AI TECH LAB · DEMO 04 · 技术导读首版</div><h1>混合检索：关键词和潜在向量怎样互补？</h1><p class="lead">只按关键词找资料容易漏掉近义表达；只按一种向量相似度排序又可能遗漏精确标识符。一个实用检索管道可以保留两种排序信号，再融合和重新排序。</p><p><a href="../index.html">← 返回 27 项技术目录</a></p></header><section><h2>01｜这项技术要解决什么问题</h2><p>只按关键词找资料容易漏掉近义表达；只按一种向量相似度排序又可能遗漏精确标识符。一个实用检索管道可以保留两种排序信号，再融合和重新排序。</p></section><section><h2>02｜核心技术与实现机制</h2><p>代码真实构建 rank-bm25 词项索引，以及 TF-IDF 经截断 SVD 降维得到的潜在向量空间。分别计算 BM25 和潜在余弦信号，经 Reciprocal Rank Fusion（RRF）融合，再做可解释短语匹配重排。这里没有预训练神经文本向量。</p><div class="flow" aria-label="处理流程示意"><div class="step"><b>01</b>BM25 关键词排名</div><div class="step"><b>02</b>TF-IDF/SVD 潜在向量</div><div class="step"><b>03</b>RRF 排序融合</div><div class="step"><b>04</b>短语重排与来源</div></div><p class="small">上方为根据工程步骤整理的流程示意，不是实际模型预测图。</p></section><section><h2>03｜实际实验输入与执行过程</h2><p>以五段构造英文工程资料回答 MCP、OpenTelemetry、OCR、Hybrid retrieval 和异步队列五个问题，保存每次 Top-3 排序、两路分数与原文来源，检验预期文档位于首位。</p></section><section><h2>04｜真实验收与观察到的结果</h2><p>固定五问题的 Precision@1 为 1.0，成功来源于真实算法执行与断言，而非生产测试。可检索追踪每条结果的词项得分、潜在空间相似度和来源编号。</p><div class="proof"><strong>限定范围已验收</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39209375328" target="_blank" rel="noopener noreferrer">GitHub Actions #39209375328</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/04-hybrid-rag" target="_blank" rel="noopener noreferrer">工程源码（私有仓库，可能需要授权）</a></div></section><section><h2>05｜尝试复现与查看证据</h2><p>以下命令对应工程中的实验入口，需在具备依赖的 Python 环境执行，页面本身并不运行模型。</p><pre><code>cd projects/04-hybrid-rag
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Demo 04 engineering tutorial, implementation details and experiment evidence"><title>Demo 04｜混合检索：BM25、TF-IDF/SVD 与 RRF 排序</title><style>
+:root{color-scheme:light;--ink:#1d344b;--text:#283a4c;--line:#dce5ee;--muted:#536b7d;--link:#146396}*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:var(--text);font:16px/1.78 system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}.top{max-width:1100px;margin:auto;padding:24px 28px 8px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;justify-content:space-between}.top a{font-size:.92rem}a{color:var(--link);text-underline-offset:3px}main{max-width:1100px;background:#fff;margin:16px auto 70px;padding:36px 52px 66px;border:1px solid var(--line);border-radius:16px}h1{color:var(--ink);font-size:clamp(1.75rem,4vw,2.45rem);line-height:1.32;margin:10px 0 22px}h2{font-size:1.45rem;color:var(--ink);padding-top:24px;margin-top:32px;border-top:1px solid var(--line)}h3{font-size:1.16rem;color:#244d6c;margin-top:26px}p{margin:11px 0 17px}.kicker{color:#476f8e;font-size:.8rem;font-weight:750;letter-spacing:.06em}.scope{background:#eff5f9;border-left:4px solid #719bbb;padding:12px 16px;color:#40596e;border-radius:3px}code{font:.86em ui-monospace,'Cascadia Code',Consolas,monospace;background:#eef3f7;padding:1px 4px;border-radius:3px}pre{overflow:auto;white-space:pre;padding:18px;background:#162a3d;color:#edf4fa;border-radius:9px;font:13px/1.62 ui-monospace,'Cascadia Code',Consolas,monospace}pre code{background:transparent;padding:0;font:inherit}table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.92rem;margin:18px 0 22px}td,th{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}th{background:#eaf2f7}figure{padding:16px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;margin:21px 0}figure img{max-width:100%;display:block;margin:auto;max-height:500px}figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:9px}ul{padding-left:24px}footer{max-width:1100px;margin:-52px auto 70px;padding:0 24px;color:#597080;font-size:.86rem}@media(max-width:700px){.top{padding:14px 17px}.top a{font-size:.8rem}main{padding:20px 18px 44px;border-radius:0;margin:5px auto 65px}h2{font-size:1.26rem}h3{font-size:1.08rem}pre{font-size:12px;padding:12px}td,th{padding:8px}}
+</style></head><body><nav class="top"><a href="../index.html">中文目录</a><strong>中文</strong><a lang="en" href="../en/demo04/index.html">English</a></nav><main><div class="kicker">ENTERPRISE AI TECH LAB · DEMO 04 · 在线审读</div><h1>Demo 04｜混合检索：BM25、TF-IDF/SVD 与 RRF 排序</h1>
+<blockquote>
+<p>公开在线审读候选（仍待该篇人工内容验收） · 源代码位于私有工程仓库 · 实验结论只适用于声明的验证范围</p>
+</blockquote>
+<p><strong>原始源码（需访问权限）</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/04-hybrid-rag">04-hybrid-rag</a>　 <strong>Actions Run</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39209375328">39209375328</a></p>
+<h2>1. 技术需求与验收</h2>
+<p>输入业务文档和检索词，合并字面匹配与低维潜在向量的相关性，再返回可追溯的文档 ID、来源路径和打分。五个构造查询分别指向 MCP、OpenTelemetry、OCR、混合检索和队列，验收为五个查询的 Top1 与预期一致。实现采用 BM25、字符 2–3 gram TF-IDF、TruncatedSVD 和 RRF；它没有调用神经 Embedding 模型，也没有把答案生成部分并入检索链路。</p>
+<h2>2. 技术方案和数据链路</h2>
+<p><code>HybridIndex</code> 初始化时把文档分别转为 BM25 token 序列和 TF-IDF 稀疏矩阵，后者执行截断 SVD 并 L2 归一化。查询阶段分别排序两个检索通道，用 <code>1/(60+rank)</code> 累计互逆排名分数；如果原文包含完整查询短语，再加 <code>0.02</code>。这是一种透明的短语加权规则，绝不是训练过的 Cross-Encoder。业务落地时应当记录独立通道的 rank/score 以便解释错排。</p>
+<h2>3. 核心实现及关键代码</h2>
+<h3>3.1 混合索引建立</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/04-hybrid-rag/hybrid_retrieval.py"><code>hybrid_retrieval.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">self.bm25 = BM25Okapi(self.words)
+self.vectorizer = TfidfVectorizer(analyzer=&quot;char&quot;, ngram_range=(2, 3))
+tfidf = self.vectorizer.fit_transform([d[&quot;text&quot;] for d in docs])
+dim = min(8, min(tfidf.shape) - 1)
+self.svd = TruncatedSVD(n_components=dim, random_state=17)
+self.embeddings = normalize(self.svd.fit_transform(tfidf))
+</code></pre>
+<p>BM25 建立词项频率统计；字符 n-gram 能覆盖英文子串及连续汉字，但该 demo 的小样本不能代表中文生产分词质量。<code>dim</code> 必须小于输入矩阵有效维数，避免小语料 SVD 失败。<code>random_state=17</code> 固定分解随机性，归一化后可用内积计算潜在向量余弦相似度。真实检索索引更新与持久化尚未实现。</p>
+<h3>3.2 排名融合与最终排序</h3>
+<p><strong>对应源码</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/04-hybrid-rag/hybrid_retrieval.py"><code>hybrid_retrieval.py</code></a> — 关键代码节选（省略上下文，不可直接独立执行）</p>
+<pre><code class="language-python">lex_rank = {int(idx): rank + 1 for rank, idx in enumerate(lexical_order)}
+vec_rank = {int(idx): rank + 1 for rank, idx in enumerate(dense_order)}
+rrf = 1/(60+lex_rank[i]) + 1/(60+vec_rank[i])
+phrase = int(query.casefold() in doc[&quot;text&quot;].casefold())
+score = rrf + 0.02 * phrase
+</code></pre>
+<p>RRF 融合的是名次而非 BM25 与余弦的不同量纲原始分数；常数 60 会削弱头部排名差异。短语加权 <code>0.02</code> 在此小例子中的影响可能大于两个 RRF 项的细微差别。排序最后按得分降序并以 ID 处理并列，可复算。该“rerank”只是规则加权，不应与 Demo 19 真正的模型重排混淆。</p>
+<h2>4. 实验结果与证据</h2>
+<p>归档 <code>hybrid_e2e_result.json</code> 的状态为 <code>HYBRID_RRF_RERANK_E2E_PASS</code>，五个手工构造查询全部命中预期文档，<code>precision_at_1=1.0</code>。该指标仅针对五条已知文档和查询，不能外推到真实企业检索集。保存了各 Top3 的 BM25、潜在余弦、RRF、短语命中和总分。</p>
+<table>
+<thead>
+<tr>
+  <th>证据字段</th>
+  <th>归档实测值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Status</code></td>
+  <td>HYBRID_RRF_RERANK_E2E_PASS</td>
+</tr>
+<tr>
+  <td><code>Fixture Top1</code></td>
+  <td>5/5</td>
+</tr>
+<tr>
+  <td><code>Method</code></td>
+  <td>BM25 + TFIDF-SVD latent vectors + RRF + phrase rerank</td>
+</tr>
+<tr>
+  <td><code>Neural embedding</code></td>
+  <td>False</td>
+</tr>
+</tbody>
+</table>
+<p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 325"><rect width="830" height="325" fill="white"/><text x="20" y="30" font-size="20" fill="#26455f">Five constructed queries with expected Top1 (binary match)</text><text x="18" y="83" fill="#274867" font-size="16">mcp</text><rect x="360.0" y="67" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="85" fill="#203a55" font-size="15">1</text><text x="18" y="132" fill="#274867" font-size="16">otel</text><rect x="360.0" y="116" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="134" fill="#203a55" font-size="15">1</text><text x="18" y="181" fill="#274867" font-size="16">ocr</text><rect x="360.0" y="165" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="183" fill="#203a55" font-size="15">1</text><text x="18" y="230" fill="#274867" font-size="16">rag</text><rect x="360.0" y="214" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="232" fill="#203a55" font-size="15">1</text><text x="18" y="279" fill="#274867" font-size="16">queue</text><rect x="360.0" y="263" width="350.0" height="26" rx="5" fill="#457ea8"/><text x="725" y="281" fill="#203a55" font-size="15">1</text></svg>
+<em>基于归档数据制作的对比图，指标定义见下表</em></p>
+<h2>5. 工程使用与集成</h2>
+<p>可在知识搜索服务中把文档采集与切分、BM25 索引、真实 Embedding 召回和候选重排拆成模块。在规模更大的项目里，需替换 TF-IDF/SVD 为经评价的向量表示方案，并测召回率、相关性标注、延迟和增量更新。若首阶段没有取回相关候选，后续重排也无从修复。</p>
+<p><strong>复现实验（私有仓库）</strong></p>
+<pre><code class="language-bash">cd projects/04-hybrid-rag
 python -m pip install -r requirements.txt
-python verify_hybrid.py</code></pre><p class="small">具体模型下载、系统依赖及权限要求以项目代码为准；公开网站不会再分发私有源码和第三方模型。 </p></section><section><h2>06｜能力边界与下一步深入方向</h2><p class="note">不包含神经 Embedding、LLM 回答、学习型 Cross-Encoder 或中文实际语料。五条合成资料无法衡量 Recall@k、企业搜索质量或检索误差。</p><p>本页是依据已验收工程编写的首版技术导读，尚未达到已发布六篇图文教程的深化程度。后续将按读者需求继续补充真实结果可视化、问题案例和详细原理。</p></section><footer>Demo 04 · 双语技术导读，实验来源可追溯 · <a href="../index.html">返回目录</a></footer></main></body></html>
+python verify_hybrid.py
+</code></pre>
+<h2>6. 适用边界</h2>
+<p>五条合成英文文档和规则重排；无神经 Embedding、无向量数据库、无真实语义评测、无生产吞吐与权限过滤。</p>
+<p><strong>实测来源</strong>：<a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39209375328">GitHub Actions #39209375328</a>。原始归档保存在私有资料库，公开页面不发布私有附件或第三方受限媒体。</p>
+</main><footer>依据真实工程源码及归档证据，文章待人工验收</footer></body></html>
