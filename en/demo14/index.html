@@ -1,5 +1,263 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo 14 · Genuine Qwen tool-call proposals, validation and execution</title><meta name="description" content="A real agent-like tool flow lets the model propose the function name and arguments, while the trusted application validates and authorizes any resulting side ef"><style>:root{font:16px/1.82 system-ui,-apple-system,"Microsoft YaHei",sans-serif;color:#203348;background:#f3f7fb}*{box-sizing:border-box}body{margin:0}main{max-width:970px;margin:0 auto;padding:30px 22px 85px}a{color:#11669a}a:focus-visible{outline:3px solid #2c75a5}h1{font-size:clamp(1.9rem,4.7vw,2.6rem);line-height:1.3}h2{font-size:1.4rem;line-height:1.45}p{margin:10px 0 16px}.lead{font-size:1.09rem;color:#455d71}.lang{display:flex;justify-content:flex-end;gap:15px}.lang strong{color:#194b69}.meta{font-size:.84rem;font-weight:700;letter-spacing:.04em;color:#316d95}section{border:1px solid #dce6ee;background:white;border-radius:16px;padding:23px 28px;margin:18px 0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}.step{background:#e9f2f8;border:1px solid #d2e3ee;border-radius:12px;padding:18px 12px;text-align:center;font-size:.92rem}.step b{display:block;color:#185e89;margin-bottom:7px}.proof{border-left:4px solid #2b8b78;padding:14px 18px;background:#eff9f4;border-radius:7px}.note{border-left:4px solid #bd8645;padding:14px 18px;background:#fff8ec;border-radius:7px}.small{font-size:.88rem;color:#607286}pre{white-space:pre-wrap;overflow:auto;background:#172a3b;color:#f3f8fc;padding:16px;border-radius:12px;font-size:.88rem}code{font-size:.93em}footer{border-top:1px solid #d8e3ed;padding-top:17px;margin-top:35px;font-size:.9rem;color:#5d7285}@media(max-width:700px){main{padding:18px 14px 60px}.lang{justify-content:flex-start}.flow{grid-template-columns:repeat(2,1fr)}section{padding:18px}}</style></head><body><main><nav class="lang"><a href="../../demo14/index.html">中文</a><strong>English</strong></nav><div class="meta">ENTERPRISE AI TECH LAB · DEMO 14 · TECHNICAL FIELD GUIDE</div><h1>Genuine Qwen tool-call proposals, validation and execution</h1><p class="lead">A real agent-like tool flow lets the model propose the function name and arguments, while the trusted application validates and authorizes any resulting side effect. Prewritten calls cannot prove model-side tool selection.</p><p><a href="../index.html">← All 27 demos</a></p><section><h2>01｜The practical question</h2><p>A real agent-like tool flow lets the model propose the function name and arguments, while the trusted application validates and authorizes any resulting side effect. Prewritten calls cannot prove model-side tool selection.</p></section><section><h2>02｜How the system works</h2><p>Pretrained Qwen2.5-0.5B-Instruct receives actual tools definitions in the tokenizer chat template and generates tool_call JSON on CPU. The application then validates schema, applies a Boolean approval decision and calls the SQLite TicketStore.<div class="flow"><div class="step"><b>01</b>Qwen proposes a tool</div><div class="step"><b>02</b>Schema validation</div><div class="step"><b>03</b>Approve or deny</div><div class="step"><b>04</b>Read back SQLite state</div></div><p class="small">An explanatory process diagram, not model-measured output.</p></p></section><section><h2>03｜Experiment inputs and execution</h2><p>Three English requests test model-proposed create, get and close operations. For mutating calls, the exact proposal is rejected without approval and succeeds with an application-supplied approval; crafted negative payloads are not attributed to model behavior.</p></section><section><h2>04｜What acceptance actually observed</h2><p>The successful Actions run preserves genuine generated tool proposals, validation, denied side effects, approved SQLite updates and direct readback. No canned function-call proposal replaces the model output.<div class="proof"><strong>Bounded verification</strong> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">GitHub Actions #39354577538</a> · <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/tree/main/projects/14-real-tool-calling">Source (private repo)</a></div></p></section><section><h2>05｜How to reproduce</h2><p>Reference command from the repository root; environment dependencies vary.<pre><code>cd projects/14-real-tool-calling
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Engineering implementation, real experiments, code and evidence for Demo 14."><title>Demo 14 | Engineering Tutorial</title><style>
+:root{color-scheme:light;--ink:#18324a;--muted:#546c7e;--accent:#08699b;--paper:#fff;--line:#dbe6ed;--soft:#f3f7fa}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{font:16px/1.72 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper);margin:0}
+.layout{max-width:1280px;margin:auto;padding:28px 24px 100px;display:grid;grid-template-columns:235px minmax(0,1fr);gap:32px}
+nav.side{position:sticky;top:26px;align-self:start;border-right:1px solid var(--line);padding-right:15px;font-size:14px}
+nav.side a{display:block;padding:6px 2px;color:#355f7d;text-decoration:none}nav.side a:hover{text-decoration:underline}
+main{min-width:0;max-width:945px}main h1{font-size:2.05rem;line-height:1.24;margin:12px 0 18px}h2{font-size:1.43rem;margin:44px 0 17px;border-bottom:1px solid var(--line);padding-bottom:10px;scroll-margin-top:16px}h3{font-size:1.12rem;margin:26px 0 10px}p{margin:11px 0 15px}a{color:var(--accent)}header.site{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:.91rem;padding-bottom:17px;border-bottom:1px solid var(--line)}
+blockquote{border-left:4px solid #6291ad;margin:18px 0 25px;background:var(--soft);padding:12px 16px;color:var(--muted)}blockquote p{margin:0}
+pre{max-width:100%;overflow:auto;background:#172b3d;color:#eaf3fa;padding:18px 20px;border-radius:8px;font-size:13px;line-height:1.55}code{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:.87em}p code,li code,td code{background:#edf3f7;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}pre code{font-size:inherit}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:.91rem;margin:18px 0 26px}th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;min-width:110px}th{background:#e9f3f7}tr:nth-child(even) td{background:#f8fafc}li{margin:8px 0}
+.figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin:24px 0}.figures figure{border:1px solid var(--line);border-radius:11px;padding:13px;margin:0;background:#f9fbfd}.figures img{width:100%;max-width:320px;display:block;margin:auto;image-rendering:auto}.figures figcaption{font-size:.84rem;color:var(--muted);margin-top:8px}
+.note{color:var(--muted);font-size:.89rem}footer{margin-top:60px;border-top:1px solid var(--line);padding:22px 0;color:var(--muted);font-size:14px}
+@media(max-width:900px){.layout{display:block;padding:18px 16px 80px}nav.side{position:static;display:flex;flex-wrap:wrap;gap:8px;border:0;border-bottom:1px solid var(--line);margin-bottom:26px;padding:0 0 15px}nav.side a{background:var(--soft);border-radius:5px;padding:5px 9px}main h1{font-size:1.7rem}}
+@media(max-width:530px){.figures{grid-template-columns:1fr}pre{padding:13px}}
+</style></head><body><div class="layout"><nav class="side" aria-label="Contents"><strong>Demo 14 · Sections</strong><a href="#section-1">1. Technical requirement and acceptance criteria</a><a href="#section-2">2. Architecture and component responsibilities</a><a href="#section-3">3. Core implementation and code explanation</a><a href="#section-4">4. Execution, real output, and verification</a><a href="#section-5">5. Integration into an enterprise service</a><a href="#section-6">6. Verified scope and limitations</a></nav><main><header class="site"><a href="../index.html">← English catalog</a><span>English · <a href="../../demo14/index.html" lang="zh-CN">中文版</a></span></header><h1>Demo 14 | LLM Tool Calling: Ticket Creation, Lookup, and Closure</h1>
+<blockquote>
+<p><strong>Engineering tutorial — English parity draft, 23 October 2026.</strong> The Chinese Demo 14 v0.4 is author-approved. This English text independently requires editorial review. Source: <code>projects/14-real-tool-calling/</code> (private). <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">Actual CPU experiment #39354577538</a>; original evidence: <code>tool_call_evidence.json</code> (privately archived).</p>
+</blockquote>
+<h2 id="section-1">1. Technical requirement and acceptance criteria</h2>
+<p>The application receives support-ticket instructions expressed in natural language. A pretrained language model must <strong>propose a function name and structured arguments</strong> for one of three supported operations: create a ticket, look up a ticket, or close a ticket. The surrounding Python application is responsible for parsing the proposal, checking that the function and arguments are allowed, enforcing a write-approval boundary, executing the database operation, and reading the persisted result back from SQLite.</p>
+<p>The test has three short, fixed English requests. Success requires that the <strong>actual Qwen model</strong> emits <code>create_ticket</code>, <code>get_ticket</code>, and <code>close_ticket</code> with the expected parameters, that unapproved mutations do not change SQLite, and that approved mutations do. A replayed <code>create_ticket</code> request must preserve the same ticket ID and row count. This is an executable end-to-end sample, not an accuracy benchmark for arbitrary instructions.</p>
+<table>
+<thead>
+<tr>
+  <th>Operation</th>
+  <th>Request / expected proposal</th>
+  <th>Database acceptance check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Create</td>
+  <td><code>request_key=&quot;demo-0001&quot;</code>, <code>title=&quot;Cannot log in&quot;</code> → <code>create_ticket</code></td>
+  <td>Denied before approval; approved request inserts one open ticket</td>
+</tr>
+<tr>
+  <td>Read</td>
+  <td><code>ticket_id=1</code> → <code>get_ticket</code></td>
+  <td>Returns the existing open ticket without mutation</td>
+</tr>
+<tr>
+  <td>Close</td>
+  <td><code>ticket_id=1</code> → <code>close_ticket</code></td>
+  <td>Denied before approval; approved request changes the status to <code>closed</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="section-2">2. Architecture and component responsibilities</h2>
+<pre><code class="language-text">User instruction
+   ↓
+Qwen2.5-0.5B-Instruct + HF Transformers tools-aware chat template
+   ↓  actual &lt;tool_call&gt; JSON text generated by the model
+Strict output parser (exactly one block; no outside prose)
+   ↓
+Allowed function name + Draft 2020-12 JSON Schema validation
+   ↓
+Application-supplied allow_mutation flag
+   ├─ denied create/close → DENIED_NO_APPROVAL, no database changes
+   └─ permitted call → TicketStore → SQLite → persistent state readback
+</code></pre>
+<p><code>Qwen/Qwen2.5-0.5B-Instruct</code> performs tool selection and argument extraction on CPU. <code>transformers</code> and <code>torch</code> execute the model; <code>jsonschema</code> validates the structured proposal. The existing <code>projects/01-mcp-ticket/ticket_store.py</code> supplies the business operations. <strong>This experiment imports <code>TicketStore</code> directly</strong>; it does not use MCP transport or a hosted model provider's native function-calling API. Demo 01 examines the separate MCP client–server communication path.</p>
+<h2 id="section-3">3. Core implementation and code explanation</h2>
+<h3>3.1 Declaring callable tools and parameter contracts</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L25-L61"><code>tool_call_e2e.py</code>, lines 25–61</a>. The application builds a list of function descriptions from <code>TOOL_PARAMETERS</code> and a separate human-readable description mapping. The excerpt below shows the create operation; the original source also defines <code>get_ticket</code> and <code>close_ticket</code> with a positive integer <code>ticket_id</code>.</p>
+<pre><code class="language-python">TOOL_PARAMETERS = {
+    &quot;create_ticket&quot;: {
+        &quot;type&quot;: &quot;object&quot;, &quot;additionalProperties&quot;: False,
+        &quot;required&quot;: [&quot;request_key&quot;, &quot;title&quot;],
+        &quot;properties&quot;: {
+            &quot;request_key&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;pattern&quot;: &quot;^[a-z0-9-]{4,32}$&quot;},
+            &quot;title&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;minLength&quot;: 3, &quot;maxLength&quot;: 100}
+        }
+    },
+    # get_ticket and close_ticket omitted from this excerpt.
+}
+TOOLS = [
+    {&quot;type&quot;: &quot;function&quot;, &quot;function&quot;: {
+        &quot;name&quot;: name, &quot;description&quot;: DESCRIPTIONS[name], &quot;parameters&quot;: schema
+    }}
+    for name, schema in TOOL_PARAMETERS.items()
+]
+</code></pre>
+<p>The outer <code>type=&quot;function&quot;</code> identifies a callable tool for the chat template; <code>description</code> conveys the intended business action and <code>parameters</code> communicates the expected argument object. The schema serves two distinct purposes: the model receives an interface contract, and <strong>the application later enforces the same contract</strong>. A model can still generate invalid arguments. <code>additionalProperties=False</code> rejects undeclared keys, including a fabricated <code>approved</code> field. The <code>request_key</code> is a stable idempotency identifier; it is not an authentication or approval token.</p>
+<h3>3.2 Formatting messages and generating model output</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L107-L133"><code>propose()</code>, lines 107–133</a>. A system message instructs the model to emit one tool call and no invented tool result; the user's natural-language request is appended as a separate message.</p>
+<pre><code class="language-python">prompt = tokenizer.apply_chat_template(
+    msgs, tools=TOOLS, tokenize=False, add_generation_prompt=True
+)
+inputs = tokenizer(prompt, return_tensors=&quot;pt&quot;, truncation=True, max_length=1800)
+with torch.inference_mode():
+    tokens = model.generate(
+        **inputs, do_sample=False, max_new_tokens=140,
+        pad_token_id=tokenizer.eos_token_id
+    )
+text = tokenizer.decode(
+    tokens[0][inputs[&quot;input_ids&quot;].shape[1]:], skip_special_tokens=True
+).strip()
+</code></pre>
+<p><code>apply_chat_template()</code> serializes roles and tool descriptions using Qwen's chat format. <code>add_generation_prompt=True</code> prepares the continuation point; <code>tokenize=False</code> returns the prompt string before tokenization. <code>torch.inference_mode()</code> disables autograd bookkeeping. <code>do_sample=False</code> makes this fixed small test more repeatable but does not establish deterministic routing under every model revision or runtime. <code>max_new_tokens=140</code> caps the generated answer length.</p>
+<p>The slice <code>[inputs[&quot;input_ids&quot;].shape[1]:]</code> removes tokens belonging to the prompt. Parsing the whole returned sequence could inadvertently include echoed tool definitions or user messages. <code>propose()</code> records the user instruction, the raw generated text, and the parsed proposal separately; downstream verification can therefore distinguish <strong>model output</strong> from <strong>application-side interpretation</strong>.</p>
+<h3>3.3 Rejecting malformed or ambiguous output</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L61-L77"><code>parse_tool_call()</code>, lines 61–77</a>. The parser locates complete <code>&lt;tool_call&gt; ... &lt;/tool_call&gt;</code> blocks and requires exactly one. It rejects any non-whitespace outside that block, parses the payload as JSON, checks that the outer object contains exactly <code>name</code> and <code>arguments</code>, and verifies their types.</p>
+<pre><code class="language-python">matches = list(CALL_REGEX.finditer(generated))
+if len(matches) != 1:
+    raise ValueError(&quot;Model must emit exactly one complete tool_call block&quot;)
+if generated[:matches[0].start()].strip() or generated[matches[0].end():].strip():
+    raise ValueError(&quot;Model emitted text outside tool_call&quot;)
+obj = json.loads(matches[0].group(1))
+if not isinstance(obj, dict) or set(obj) != {&quot;name&quot;, &quot;arguments&quot;}:
+    raise ValueError(&quot;Tool call envelope must contain exactly name and arguments&quot;)
+</code></pre>
+<p>This deliberately strict format <strong>fails closed</strong> rather than extracting a promising-looking JSON substring from a verbose answer. It does not mean the regular expression is a general-purpose streaming protocol parser; a production client may need native structured outputs, framed messages, or incremental parsing. If Qwen emits explanatory text or incomplete tags, this Demo rejects the response instead of executing a guessed function.</p>
+<h3>3.4 Allowlist and JSON Schema validation</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L79-L86"><code>validate_proposal()</code>, lines 79–86</a>.</p>
+<pre><code class="language-python">name = proposal[&quot;name&quot;]
+if not isinstance(name, str) or name not in TOOL_PARAMETERS:
+    raise ValueError(&quot;Unknown or disallowed tool&quot;)
+Draft202012Validator(TOOL_PARAMETERS[name]).validate(proposal[&quot;arguments&quot;])
+return proposal
+</code></pre>
+<p>The allowlist blocks arbitrary function names even when the proposed JSON is syntactically valid. The Draft 2020-12 validator then checks required keys, field types, regex patterns, numeric bounds, and extra properties for that specific function. Validation happens <strong>after</strong> model inference and <strong>before</strong> any business side effect. A valid schema is necessary but insufficient for authorization; an argument object containing a valid <code>ticket_id</code> must still pass the separate mutation gate.</p>
+<h3>3.5 Mutation approval and business execution</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L89-L105"><code>execute_proposal()</code>, lines 89–105</a>.</p>
+<pre><code class="language-python">def execute_proposal(proposal, store: TicketStore, *, allow_mutation: bool):
+    validate_proposal(proposal)
+    name = proposal[&quot;name&quot;]
+    args = proposal[&quot;arguments&quot;]
+    if name in (&quot;create_ticket&quot;, &quot;close_ticket&quot;) and not allow_mutation:
+        return {&quot;status&quot;: &quot;DENIED_NO_APPROVAL&quot;, &quot;name&quot;: name, &quot;executed&quot;: False}
+    if name == &quot;create_ticket&quot;:
+        record = store.create(args[&quot;request_key&quot;], args[&quot;title&quot;])
+    elif name == &quot;get_ticket&quot;:
+        record = store.get(args[&quot;ticket_id&quot;])
+    elif name == &quot;close_ticket&quot;:
+        record = store.close(args[&quot;ticket_id&quot;])
+    return {&quot;status&quot;: &quot;EXECUTED&quot;, &quot;name&quot;: name, &quot;executed&quot;: True, &quot;ticket&quot;: record}
+</code></pre>
+<p><strong>Excerpt:</strong> the source contains an additional unreachable-case assertion. The boolean <code>allow_mutation</code> is supplied by trusted application code, <strong>never parsed from model-generated arguments</strong>. The guard covers <code>create_ticket</code> and <code>close_ticket</code>; <code>get_ticket</code> is treated as read-only in this sample. Denial returns before a write reaches SQLite. This boolean is a demonstration boundary, not an authenticated human approval process, identity check, or role-based access control framework. In a real deployment, pass an authorized decision derived from your application identity, permissions, policy, and audit layer.</p>
+<h3>3.6 SQLite idempotency and state transitions</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/01-mcp-ticket/ticket_store.py#L16-L48"><code>ticket_store.py</code>, lines 16–48</a>.</p>
+<pre><code class="language-python"># Part of the tickets table schema:
+request_key TEXT NOT NULL UNIQUE,
+status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'closed'))
+
+# Inside TicketStore.create():
+db.execute(&quot;INSERT OR IGNORE INTO tickets(request_key,title) VALUES (?,?)&quot;,
+           (request_key, title))
+row = db.execute(&quot;SELECT * FROM tickets WHERE request_key = ?&quot;, (request_key,)).fetchone()
+if row[&quot;title&quot;] != title:
+    raise ValueError(&quot;idempotency key reused with different title&quot;)
+return dict(row)
+</code></pre>
+<p>The SQLite <code>UNIQUE</code> constraint prevents two ticket rows sharing one <code>request_key</code>. <code>INSERT OR IGNORE</code> plus a follow-up lookup returns the existing row for a repeated, identical request. The title equality check rejects the same key being reused for a conflicting command. Parameterized <code>?</code> queries avoid constructing SQL by concatenating user content. The table's status <code>CHECK</code> constraint restricts the stored lifecycle to <code>open</code> and <code>closed</code>.</p>
+<p>Repeated creation was tested against the actual store: the ID remained <code>1</code> and the row count remained <code>1</code>. The experiment also closes the record, creates a fresh <code>TicketStore</code> instance, and reads <code>closed</code> back from the same SQLite file. The design is intentionally compact; distributed idempotency keys, auth, concurrent request semantics, and audit retention need additional engineering.</p>
+<h3>3.7 Evidence generation, independent checking, and troubleshooting</h3>
+<p>Source: <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/tool_call_e2e.py#L136-L237"><code>run()</code>, lines 136–237</a> and <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/blob/main/projects/14-real-tool-calling/verify_evidence.py"><code>verify_evidence.py</code></a>. The test calls the pretrained model for each positive request. For create/close it attempts the same model-generated proposal first without permission, then with <code>allow_mutation=True</code>; it verifies the expected database change. Four additional <strong>program-constructed</strong> invalid proposals exercise malformed arguments, a fabricated approval field, a disallowed tool, and a string substituted for an integer ID. They are not claimed to be errors produced by the model.</p>
+<p>The E2E script writes <code>REAL_LLM_TOOL_CALL_E2E_PASS</code> and the raw model messages into <code>tool_call_evidence.json</code>. On failure it writes <code>REAL_LLM_TOOL_CALL_BLOCKED</code> and raises an exception. <code>verify_evidence.py</code> reads the saved JSON and checks the three proposals, denial results, database readback, and four negative tests. The verifier does <strong>not</strong> run model inference again.</p>
+<table>
+<thead>
+<tr>
+  <th>Symptom</th>
+  <th>Start debugging here</th>
+  <th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>No valid single <code>&lt;tool_call&gt;</code></td>
+  <td><code>propose()</code>, <code>parse_tool_call()</code></td>
+  <td>Raw output, chat template, max token budget, extra prose</td>
+</tr>
+<tr>
+  <td>Correct function but rejected arguments</td>
+  <td><code>validate_proposal()</code></td>
+  <td>Required keys, schema type, regex, extra fields</td>
+</tr>
+<tr>
+  <td>Write never happens</td>
+  <td><code>execute_proposal()</code></td>
+  <td>Trusted <code>allow_mutation</code>, <code>DENIED_NO_APPROVAL</code></td>
+</tr>
+<tr>
+  <td>Duplicate ticket created or key conflict</td>
+  <td><code>TicketStore.create()</code></td>
+  <td>Unique key, stored title, transaction and count</td>
+</tr>
+<tr>
+  <td>Evidence checker fails</td>
+  <td><code>run()</code>, <code>verify_evidence.py</code></td>
+  <td>Current run JSON, <code>events</code>, <code>sqlite_readback</code>, negative cases</td>
+</tr>
+</tbody>
+</table>
+<h2 id="section-4">4. Execution, real output, and verification</h2>
+<p>Environment: GitHub-hosted Ubuntu 24.04, Python <strong>3.12.15</strong>, CPU. Model: <code>Qwen/Qwen2.5-0.5B-Instruct</code>, requested revision <code>main</code>, observed resolved commit <code>7ae557604adf67be50417f59c2c2f167def9a775</code>. Dependencies: <code>transformers&gt;=4.45,&lt;5</code>, <code>torch&gt;=2.3,&lt;3</code>, <code>jsonschema&gt;=4.21,&lt;5</code>.</p>
+<p>From an authorized checkout of the <strong>private research repo</strong>:</p>
+<pre><code class="language-bash">cd projects/14-real-tool-calling
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python tool_call_e2e.py
-python verify_evidence.py</code></pre><p class="small">The linked source may require private repository permission; no model weights or third-party originals are republished here.</p></p></section><section><h2>06｜Limits and future deepening</h2><p><div class="note">Approval is a trusted application Boolean rather than authenticated human authorization. No MCP transport, hosted provider native tool-call API, multilingual reliability or production security evaluation was performed.</div><p>A bilingual technical orientation, not yet a fully illustrated tutorial. Future versions will add verified visual evidence and worked examples.</p></p></section><footer>Demo 14 · Engineering-evidence-linked field guide · <a href="../index.html">Catalogue</a></footer></main></body></html>
+python verify_evidence.py
+</code></pre>
+<p>The actual model emitted the following first proposal:</p>
+<pre><code class="language-xml">&lt;tool_call&gt;
+{&quot;name&quot;: &quot;create_ticket&quot;, &quot;arguments&quot;: {&quot;request_key&quot;: &quot;demo-0001&quot;, &quot;title&quot;: &quot;Cannot log in&quot;}}
+&lt;/tool_call&gt;
+</code></pre>
+<p>The subsequent model outputs proposed <code>get_ticket</code> and <code>close_ticket</code> with <code>{&quot;ticket_id&quot;:1}</code>. The complete observed state is:</p>
+<table>
+<thead>
+<tr>
+  <th>Step</th>
+  <th>Application response</th>
+  <th>Persisted ticket state</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Create without approval</td>
+  <td><code>DENIED_NO_APPROVAL</code>, <code>executed=false</code></td>
+  <td>No ticket; count <code>0</code></td>
+</tr>
+<tr>
+  <td>Create with approval</td>
+  <td><code>EXECUTED</code>, id <code>1</code></td>
+  <td><code>open</code>; count <code>1</code></td>
+</tr>
+<tr>
+  <td>Repeat same creation</td>
+  <td>Same id <code>1</code></td>
+  <td><code>open</code>; count still <code>1</code></td>
+</tr>
+<tr>
+  <td>Read ticket</td>
+  <td><code>EXECUTED</code></td>
+  <td>Returns <code>open</code></td>
+</tr>
+<tr>
+  <td>Close without approval</td>
+  <td><code>DENIED_NO_APPROVAL</code></td>
+  <td>Still <code>open</code></td>
+</tr>
+<tr>
+  <td>Close with approval</td>
+  <td><code>EXECUTED</code></td>
+  <td><code>closed</code>; independent SQLite readback <code>closed</code></td>
+</tr>
+</tbody>
+</table>
+<p>The actual artifact reports <strong>three model-generated tool calls</strong>, <strong>four crafted invalid proposals rejected</strong>, and a final row count of <strong>one</strong>. The independent JSON verifier emits <code>REAL_LLM_TOOL_CALL_EVIDENCE_VERIFIED</code>. The results come from <a href="https://github.com/manchaohu/enterprise-ai-tech-lab/actions/runs/39354577538">GitHub Actions run #39354577538</a> and the private archived ZIP, not a newly rerun benchmark.</p>
+<h2 id="section-5">5. Integration into an enterprise service</h2>
+<p>Keep the model proposal adapter separate from application policy and business execution. In an HTTP or worker service, replace the three hardcoded user requests with a request DTO, and map the DTO to the model's role/messages format. Log raw tool proposals and parser rejections with sensible privacy controls. Replace the demo boolean with an application-originating authorization decision tied to a principal, a concrete tool call, the exact arguments, and an expiry/replay policy. Call existing business APIs or an actual MCP client behind the policy gate, rather than granting the model direct database access.</p>
+<p>Store operation IDs/idempotency keys at the business boundary. Return structured success and denial states; provide retry behavior only after deciding which operations are replay-safe. The Demo proves one local SQLite path, <strong>not</strong> networked approval, multi-user authorization, distributed transactions, or production reliability.</p>
+<h2 id="section-6">6. Verified scope and limitations</h2>
+<ul>
+<li>Only three short English positive requests; no measured tool-routing accuracy on varied languages or difficult inputs.</li>
+<li>Application approval is a trusted boolean supplied by the caller, not a verified human workflow.</li>
+<li>Function proposals are generated using Hugging Face tools-aware chat formatting, <strong>not</strong> a hosted provider-native tool-call API; execution directly imports <code>TicketStore</code>, <strong>not</strong> MCP transport.</li>
+<li>Four negative samples were constructed by the test, not generated by Qwen.</li>
+<li>Model <code>main</code> was requested; the observed resolved SHA is preserved for traceability, but the experiment did not pin <code>MODEL_REVISION</code> to that immutable SHA.</li>
+<li>Private source is inaccessible to anonymous site readers; reproduction requires repository authorization. CI success is a narrow Demo outcome rather than production certification.</li>
+</ul>
+<footer>Engineering tutorial · English parity draft · Based on author-approved Chinese article · Narrow experimental scope · Source code is private</footer></main></div></body></html>
